@@ -2,7 +2,7 @@
 
 An arcade bicycle racer for **GitHub Game Off 2026** (theme: **SHIFT**) by **Razorbill Studio**. Working title.
 
-Race down mountain roads and forest trails. Off every jump you can spin or flip; press **Shift** right as you land for a **PERFECT** landing and a burst of boost. Some jumps have a glowing **SHIFT portal** over them: fly through and you're sent to another world for a few seconds, then dropped back into the race ahead of where you left.
+Race down mountain roads and forest trails. Off a big jump, time slows and a diamond closes in: press **Shift** as it hits the green and the rider throws a stunt sized to the height left. Room for another and the diamond comes back; chain them all the way down for a burst of boost. Some jumps have a glowing **SHIFT portal** over them: fly through and you're sent to another world for a few seconds, then dropped back into the race ahead of where you left.
 
 **Pedal → Launch → Trick → Land → Boost → Portal → back in the race.**
 
@@ -14,8 +14,7 @@ Race down mountain roads and forest trails. Off every jump you can spin or flip;
 | S / Left trigger | Brake, then reverse |
 | A D / Left stick | Steer and lean |
 | Space (hold, then release) | Bunny hop |
-| Left Shift | Boost, and the landing press |
-| In the air: steer / pedal / brake | Spin, flip forward, flip back |
+| Left Shift | Boost on the ground; in the air, the stunt press |
 | R | Reset |
 | Esc | Pause |
 

@@ -85,6 +85,32 @@ namespace ShiftRush.EditorTools
             so.FindProperty("cyan").colorValue = Cyan;
             so.ApplyModifiedPropertiesWithoutUndo();
 
+            // Landing: the SHIFT diamond again. A magenta diamond closes on a white one as the ground comes up;
+            // the live trick name sits above it.
+            var diamondFrame = AssetDatabase.LoadAssetAtPath<Sprite>(UIArt + "T_DiamondFrame.png");
+            var land = new GameObject("Landing", typeof(RectTransform)).GetComponent<RectTransform>();
+            land.SetParent(root.transform, false);
+            Place(land, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -170), new Vector2(520, 260));
+            var landGroup = land.gameObject.AddComponent<CanvasGroup>();
+            var target = Img(land, "Target Diamond", diamondFrame, Color.white);
+            Place(target.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96));
+            var closer = Img(land, "Closing Diamond", diamondFrame, Magenta);
+            Place(closer.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96));
+            var trick = Txt(land, "Trick", "BACKFLIP 360", fontTitle, 54, Color.white, TextAlignmentOptions.Center);
+            Place(trick.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(0, 0), new Vector2(0, 64));
+            var key = Txt(land, "Key", "SHIFT TO LAND", fontBold, 18, Steel, TextAlignmentOptions.Center);
+            key.characterSpacing = 12;
+            Place(key.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0.5f, 0), new Vector2(0, 8), new Vector2(0, 26));
+            var stunts = root.AddComponent<ShiftRush.Stunts.StuntDirector>();
+            var sso = new SerializedObject(stunts);
+            sso.FindProperty("landGroup").objectReferenceValue = landGroup;
+            sso.FindProperty("targetDiamond").objectReferenceValue = target;
+            sso.FindProperty("closingDiamond").objectReferenceValue = closer;
+            sso.FindProperty("trickText").objectReferenceValue = trick;
+            sso.FindProperty("keyText").objectReferenceValue = key;
+            sso.FindProperty("accent").colorValue = Magenta;
+            sso.ApplyModifiedPropertiesWithoutUndo();
+
             foreach (var g in root.GetComponentsInChildren<Graphic>(true)) g.raycastTarget = false;
             PrefabUtility.SaveAsPrefabAsset(root, RushPath);
             Object.DestroyImmediate(root);

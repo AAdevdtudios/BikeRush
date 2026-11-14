@@ -68,6 +68,8 @@ namespace ShiftRush.Race
 
         /// <summary>A bonus paid: its name and the nitro (0..1 of a tank).</summary>
         public static event System.Action<string, float> Awarded;
+        /// <summary>The one in this scene (races, free roam and the stunt park).</summary>
+        public static RushBonus Instance { get; private set; }
 
         class Watch { public float along, minLateral = 99f; public bool alongSet, paid; }
         readonly Dictionary<RaceManager.Racer, Watch> watches = new Dictionary<RaceManager.Racer, Watch>();
@@ -88,7 +90,9 @@ namespace ShiftRush.Race
 
         static void Spawn(Scene scene)
         {
-            if (FindFirstObjectByType<RushBonus>() != null || FindFirstObjectByType<RaceLine>() == null) return;
+            // Races, and any other scene with a rideable vehicle (free roam, the stunt park): tricks pay out everywhere.
+            if (FindFirstObjectByType<RushBonus>() != null || scene.name == "MainMenu") return;
+            if (FindFirstObjectByType<RaceLine>() == null && !HasVehicle()) return;
             var prefab = Resources.Load<RushBonus>("SR_RushHUD");
             if (prefab == null) return;
             var rb = Instantiate(prefab);
@@ -96,8 +100,17 @@ namespace ShiftRush.Race
             SceneManager.MoveGameObjectToScene(rb.gameObject, scene);
         }
 
+        static bool HasVehicle()
+        {
+            foreach (var mb in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)) if (mb is IVehicle) return true;
+            return false;
+        }
+
+        void OnDestroy() { if (Instance == this) Instance = null; }
+
         void Awake()
         {
+            Instance = this;
             if (popGroup != null) popGroup.alpha = 0f;
             if (draftGroup != null) draftGroup.alpha = 0f;
         }
@@ -236,14 +249,25 @@ namespace ShiftRush.Race
         void Award(RaceManager.Racer p, string label, float nitro)
         {
             if (p == null) return;
+            Pay(p.vehicle, label, null, nitro);
+        }
+
+        /// <summary>
+        /// Pays a bonus to a vehicle: chains with the last one (x2..x5), shows the pop and plays the bell.
+        /// detail replaces the "+N% BOOST" line's prefix (e.g. "PERFECT LANDING"). Used by tricks too.
+        /// </summary>
+        public void Pay(IVehicle vehicle, string label, string detail, float nitro)
+        {
+            if (vehicle == null) return;
             chain = Time.time - lastBonus <= chainWindow ? Mathf.Min(chain + 1, chainMax) : 1;
             lastBonus = Time.time;
             float pay = nitro * (1f + (chain - 1) * chainStep) * Core.Difficulty.Current.bonusNitro;
-            if (p.vehicle is INitroTank tank && tank.Nitro01 >= 0f) tank.AddNitro(pay);
+            if (vehicle is INitroTank tank && tank.Nitro01 >= 0f) tank.AddNitro(pay);
             Awarded?.Invoke(label, pay);
 
             if (popHeadline != null) popHeadline.text = label;
-            if (popDetail != null) popDetail.text = "+" + Mathf.RoundToInt(pay * 100f) + "% NITRO";
+            string paid = "+" + Mathf.RoundToInt(pay * 100f) + "% BOOST";
+            if (popDetail != null) popDetail.text = string.IsNullOrEmpty(detail) ? paid : detail + "  //  " + paid;
             if (popChain != null) popChain.text = chain > 1 ? "x" + chain : "";
             popUntil = Time.unscaledTime + 1.6f;
             popPunch = 1f;

@@ -26,8 +26,10 @@ namespace ShiftRush.Vehicles
         [Header("Feel")]
         [Tooltip("How quickly steering follows the stick (the pack's own value is 5).")]
         [SerializeField] float steerResponse = 5f;
-        [Tooltip("Air spins and flips: the pack's freestyle air control.")]
+        [Tooltip("Turn off the pack's own freestyle air rotation (stunts are played by the StuntDirector).")]
         [SerializeField] bool tricks = true;
+        [Tooltip("Height above the ground (m) at which the pack's stunt mode starts (its default is 5).")]
+        [SerializeField] float trickHeight = 1.8f;
 
         BicycleController bike;
         Rigidbody body;
@@ -35,6 +37,9 @@ namespace ShiftRush.Vehicles
         InputAction steerAction, throttleAction, brakeAction, hopAction, boostAction;
 
         float tank, steerAxis, accelAxis;
+        bool posed;
+        Quaternion poseTarget;
+        float poseFollow;
         bool regen = true, boostInputOn = true, controllable = true, boosting, hopHeld;
 
         // AI driving (IDriverInput)
@@ -45,8 +50,35 @@ namespace ShiftRush.Vehicles
         public Transform Transform { get { return transform; } }
         public Rigidbody Body { get { return body; } }
         public float SpeedKmh { get { return body != null ? Vector3.Dot(body.linearVelocity, transform.forward) * 3.6f : 0f; } }
-        public bool AnyWheelGrounded { get { return bike != null && !bike.isAirborne; } }
-        public bool AllWheelsGrounded { get { return bike != null && !bike.isAirborne && !bike.IsBunnyHopping; } }
+        // Our own ground check from each wheel, ignoring the bike and rider (the pack's single ray from the frame
+        // can hit the rider's own colliders once the bike is upside down mid-trick).
+        public bool AnyWheelGrounded { get { return WheelDown(bike != null ? bike.fPhysicsWheel : null) || WheelDown(bike != null ? bike.rPhysicsWheel : null); } }
+        public bool AllWheelsGrounded { get { return WheelDown(bike != null ? bike.fPhysicsWheel : null) && WheelDown(bike != null ? bike.rPhysicsWheel : null); } }
+
+        readonly RaycastHit[] hits = new RaycastHit[12];
+
+        bool WheelDown(GameObject wheel)
+        {
+            if (wheel == null) return false;
+            var sc = wheel.GetComponent<SphereCollider>();
+            float r = sc != null ? sc.radius * Mathf.Max(wheel.transform.lossyScale.x, wheel.transform.lossyScale.y) : 0.35f;
+            return GroundBelow(wheel.transform.position, r + 0.25f, out _) < r + 0.25f;
+        }
+
+        /// <summary>Distance straight down from a point to the ground (not this bike or its rider); large if none.</summary>
+        public float GroundBelow(Vector3 from, float maxDistance, out Vector3 normal)
+        {
+            normal = Vector3.up;
+            int n = Physics.RaycastNonAlloc(from, Vector3.down, hits, maxDistance, ~0, QueryTriggerInteraction.Ignore);
+            float best = float.MaxValue;
+            for (int i = 0; i < n; i++)
+            {
+                var t = hits[i].transform;
+                if (t.root == transform.root || t.IsChildOf(transform)) continue;
+                if (hits[i].distance < best) { best = hits[i].distance; normal = hits[i].normal; }
+            }
+            return best;
+        }
         public float SteerInput { get { return steerAxis; } }
         public float PitchInput { get { return accelAxis; } }
 
@@ -63,6 +95,9 @@ namespace ShiftRush.Vehicles
             }
         }
         public float Nitro01 { get { return tank; } }
+        /// <summary>An AI rider is steering this bike (not the player).</summary>
+        public bool IsAIDriven { get { return driven; } }
+        public BicycleController Bike { get { return bike; } }
         public bool NitroActive { get { return boosting; } }
 
         void Awake()
@@ -71,7 +106,12 @@ namespace ShiftRush.Vehicles
             body = GetComponent<Rigidbody>();
             bodies = GetComponentsInChildren<Rigidbody>(true);
             bike.externalInput = true;
-            if (tricks && bike.airTimeSettings != null) bike.airTimeSettings.freestyle = true;
+            if (tricks && bike.airTimeSettings != null)
+            {
+                bike.airTimeSettings.freestyle = true;
+                bike.airTimeSettings.heightThreshold = trickHeight;
+                bike.airTimeSettings.airTimeRotationSensitivity = 0f; // the pack's per-step kick spins far too fast: we set the rate ourselves
+            }
             tank = startBoost;
         }
 
@@ -118,11 +158,37 @@ namespace ShiftRush.Vehicles
             bike.bunnyHopInputState = hop ? 1 : (hopHeld ? -1 : 0);
             hopHeld = hop;
 
-            // Boost: the pack's sprint, only while the tank has some.
-            boosting = boost && tank > 0f && controllable;
+            // Boost: the pack's sprint, only while the tank has some, and only on the ground (Shift is the landing
+            // press in the air).
+            boosting = boost && tank > 0f && controllable && AnyWheelGrounded;
             if (boosting) tank = Mathf.Max(0f, tank - burnPerSecond * dt);
             else if (regen) tank = Mathf.Min(1f, tank + regenPerSecond * dt);
             bike.sprint = boosting;
+        }
+
+        /// <summary>
+        /// In the air, hold the bike at an orientation (the flight path stays physics). follow 0 snaps to it each
+        /// physics step (a stunt's exact turn); above 0 eases towards it at that rate (levelling for a landing).
+        /// </summary>
+        public void HoldPose(Quaternion target, float follow) { posed = true; poseTarget = target; poseFollow = follow; }
+        public void ReleasePose() { posed = false; }
+
+        void FixedUpdate()
+        {
+            if (!posed || body == null || !controllable) return;
+            Quaternion want = poseFollow <= 0f ? poseTarget
+                : Quaternion.Slerp(body.rotation, poseTarget, 1f - Mathf.Exp(-poseFollow * Time.fixedDeltaTime));
+            Quaternion delta = want * Quaternion.Inverse(body.rotation);
+            // Turn the frame and both joined wheels as one piece about the frame's centre, or the joints drag it back.
+            Vector3 pivot = body.worldCenterOfMass, v = body.linearVelocity;
+            foreach (var rb in bodies)
+            {
+                if (rb == null) continue;
+                rb.position = pivot + delta * (rb.position - pivot);
+                rb.rotation = delta * rb.rotation;
+                rb.linearVelocity = v;
+                rb.angularVelocity = rb == body ? Vector3.zero : delta * rb.angularVelocity; // wheels keep spinning
+            }
         }
 
         static float Read(InputAction a) { return a != null && a.enabled ? a.ReadValue<float>() : 0f; }
