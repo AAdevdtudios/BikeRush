@@ -1,0 +1,84 @@
+<title>BikeRush Game Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Inter:wght@400;600&display=swap">
+<style>
+/* Layout: a single plain column of notes, like a page from the team's notebook. */
+:root {
+  --bg: #f6f6f9;
+  --ink: #17182a;
+  --muted: #5f6380;
+  --line: #e0e2ec;
+  --accent: #c8158f;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0e18; --ink: #eceefa; --muted: #9ca1ba; --line: #262940; --accent: #ff4fd8; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #0d0e18; --ink: #eceefa; --muted: #9ca1ba; --line: #262940; --accent: #ff4fd8; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 17px/1.65 var(--font-body); }
+.page { max-width: 680px; margin: 0 auto; padding-block: 48px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font: italic 800 56px/1 var(--font-display); margin: 0 0 6px; }
+h1 span { color: var(--accent); }
+.note { color: var(--muted); font-size: 15px; margin: 0 0 32px; }
+h2 { font: 600 13px/1 var(--font-body); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 40px 0 10px; }
+p { margin: 0 0 14px; }
+ul { margin: 0 0 14px; padding-left: 20px; }
+li { margin: 6px 0; }
+b { font-weight: 600; }
+.kbd { font: 600 13px/1 var(--font-body); padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; white-space: nowrap; }
+hr { border: none; border-top: 1px solid var(--line); margin: 40px 0 16px; }
+footer { color: var(--muted); font-size: 14px; }
+</style>
+
+<div class="page">
+  <h1>BIKE<span>//</span>RUSH</h1>
+  <p class="note">Our Game Off 2026 game. Working title. Theme is SHIFT. Due 1 December.</p>
+
+  <h2>The idea</h2>
+  <p>It's a bike racing game. You race other riders down mountain roads and forest trails, and the fun bit is the jumps.</p>
+  <p>When you go off a jump you can do a trick, like a spin or a flip. If you land it well you get boost, and boost makes you faster. Land it badly and your rider falls off and you lose time.</p>
+  <p>Some jumps have a glowing portal over them. Fly through it and you get sent to a different place for a few seconds, like a neon BMX track or some rooftops. Do well there and you come back into the race ahead of where you were.</p>
+
+  <h2>Why it fits SHIFT</h2>
+  <ul>
+    <li>You shift your weight in the air to do tricks.</li>
+    <li>You press <span class="kbd">Shift</span> right as you land to get a perfect landing.</li>
+    <li>The portals shift you into another world and back.</li>
+  </ul>
+
+  <h2>What you do in a race</h2>
+  <p>Pedal, hit a jump, do a trick, land it, get boost, go faster. Sometimes take a portal. Repeat until the finish line.</p>
+
+  <h2>Types of races</h2>
+  <ul>
+    <li><b>Race</b>: you against five other riders.</li>
+    <li><b>Downhill</b>: one fast run to the bottom of the mountain.</li>
+    <li><b>Time trial</b>: beat your own best time and race your ghost.</li>
+  </ul>
+
+  <h2>Bikes</h2>
+  <p>Three bikes to start. A mountain bike that's good at everything, a BMX that's best for tricks, and a heavy downhill bike that's fastest but hard to flip. You can tune them a bit (gears, tyres, suspension, weight) and pick your rider and colours.</p>
+
+  <h2>Starting the game for the first time</h2>
+  <p>You make your rider, then do a short practice ride that shows you the controls. You go through your first portal in the first couple of minutes. Then your first proper race, which is set to easy so you have a good chance of winning. Winning unlocks the BMX.</p>
+
+  <h2>Controls</h2>
+  <ul>
+    <li><span class="kbd">W</span> pedal, <span class="kbd">S</span> brake, <span class="kbd">A</span> <span class="kbd">D</span> steer</li>
+    <li><span class="kbd">Space</span> hold and let go to jump</li>
+    <li><span class="kbd">Shift</span> boost, and press it when landing</li>
+    <li>Steer and pedal in the air to spin and flip</li>
+  </ul>
+
+  <h2>Plan</h2>
+  <ul>
+    <li>Week 1: get our own bike riding, tricks and landings working.</li>
+    <li>Week 2: the first track with other riders, then the portals and two portal worlds.</li>
+    <li>Last days: the other bikes, the first-time player experience, sound, a web version and the itch.io page.</li>
+  </ul>
+
+  <hr>
+  <footer>Razorbill Studio · Concept and inspiration: Jennifer Ugwoke · Fuller version coming when the game is done.</footer>
+</div>

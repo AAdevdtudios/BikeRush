@@ -1,0 +1,337 @@
+<title>BikeRush Game Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;1,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column with a sticky section index on wide screens; loop + schedule as the two visual anchors. */
+:root {
+  --bg: #f4f5fa;
+  --panel: #ffffff;
+  --ink: #141626;
+  --muted: #5d6280;
+  --line: #dfe2ef;
+  --magenta: #d6189f;
+  --cyan: #0a8fb3;
+  --magenta-soft: #fbe3f3;
+  --cyan-soft: #def3f9;
+  --done: #2f8f5b;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b0c16; --panel: #141627; --ink: #eceefa; --muted: #9aa0b8; --line: #262a44;
+  --magenta: #ff40d9; --cyan: #38e1ff; --magenta-soft: #2b1430; --cyan-soft: #0f2633; --done: #4fd08a; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0b0c16; --panel: #141627; --ink: #eceefa; --muted: #9aa0b8; --line: #262a44;
+  --magenta: #ff40d9; --cyan: #38e1ff; --magenta-soft: #2b1430; --cyan-soft: #0f2633; --done: #4fd08a; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--font-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 48px; }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; } nav.toc { display: none; } }
+
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13px; }
+nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 4px 0 4px 12px; border-left: 2px solid var(--line); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); border-left-color: var(--magenta); outline: none; }
+nav.toc .label { font: 600 11px/1 var(--font-body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+
+main { min-width: 0; }
+.eyebrow { font: 600 12px/1 var(--font-body); letter-spacing: .16em; text-transform: uppercase; color: var(--magenta); }
+h1 { font: italic 800 clamp(48px, 9vw, 88px)/.9 var(--font-display); letter-spacing: -.01em; margin: 12px 0 8px; text-wrap: balance; }
+h1 .slash { color: var(--magenta); }
+.sub { font-size: 19px; color: var(--muted); max-width: 62ch; margin: 0 0 28px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--muted); padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.meta b { color: var(--ink); font-weight: 600; }
+
+section { padding-top: 56px; }
+h2 { font: 800 34px/1 var(--font-display); text-transform: uppercase; letter-spacing: .01em; margin: 0 0 6px; text-wrap: balance; }
+h2 small { display: block; font: 500 14px/1.4 var(--font-body); text-transform: none; letter-spacing: 0; color: var(--muted); margin-top: 8px; }
+h3 { font: 800 22px/1.1 var(--font-display); text-transform: uppercase; margin: 0 0 6px; }
+p, li { max-width: 68ch; }
+ul { padding-left: 20px; } li { margin: 4px 0; }
+.kbd { font: 500 12px/1 var(--font-mono); padding: 3px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--panel); white-space: nowrap; }
+.pitch { font: 600 24px/1.35 var(--font-body); max-width: 40ch; margin: 18px 0 0; text-wrap: balance; }
+.pitch em { font-style: normal; color: var(--magenta); }
+
+/* The loop: a ring of six steps */
+.loop { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; margin: 28px 0 8px; }
+@media (max-width: 700px) { .loop { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .loop .step::after { display: none; } }
+.step { position: relative; padding: 16px 14px; background: var(--panel); border: 1px solid var(--line); }
+.step + .step { border-left: none; }
+@media (max-width: 700px) { .step + .step { border-left: 1px solid var(--line); } }
+.step .n { font: 500 11px/1 var(--font-mono); color: var(--muted); }
+.step .w { font: 800 22px/1 var(--font-display); text-transform: uppercase; margin: 8px 0 6px; }
+.step p { font-size: 13px; color: var(--muted); margin: 0; }
+.step.shift { background: var(--magenta-soft); }
+.step.shift .w { color: var(--magenta); }
+.loopnote { font-size: 13px; color: var(--muted); }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+@media (max-width: 760px) { .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; min-width: 0; }
+.card p { margin: 6px 0 0; font-size: 15px; }
+.card ul { font-size: 15px; margin: 8px 0 0; }
+.tag { display: inline-block; font: 600 11px/1 var(--font-body); letter-spacing: .1em; text-transform: uppercase; padding: 5px 8px; border-radius: 3px; }
+.tag.core { background: var(--magenta-soft); color: var(--magenta); }
+.tag.stretch { background: var(--cyan-soft); color: var(--cyan); }
+.tag.after { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+
+.mechanic { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+@media (max-width: 600px) { .mechanic { grid-template-columns: minmax(0, 1fr); gap: 6px; } }
+.mechanic .k { font: 800 15px/1.1 var(--font-display); text-transform: uppercase; color: var(--magenta); letter-spacing: .03em; }
+.mechanic p { margin: 0 0 8px; }
+
+.scroll { overflow-x: auto; margin-top: 18px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11px/1.2 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: none; }
+td.date { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+td.stat { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bar { display: inline-block; height: 8px; border-radius: 2px; background: var(--cyan); vertical-align: middle; }
+.have { color: var(--done); font-weight: 600; }
+.need { color: var(--magenta); font-weight: 600; }
+
+.flow { counter-reset: s; list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; }
+.flow li { counter-increment: s; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 18px; max-width: none; }
+.flow li::before { content: attr(data-t); font: 500 12px/1.5 var(--font-mono); color: var(--cyan); }
+.flow b { display: block; }
+.flow span { color: var(--muted); font-size: 14px; }
+
+.callout { margin-top: 20px; padding: 16px 20px; border-left: 3px solid var(--magenta); background: var(--panel); font-size: 15px; }
+footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { nav.toc a { transition: color .15s, border-color .15s; } }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <div class="label">Contents</div>
+    <a href="#pitch">The pitch</a>
+    <a href="#loop">Core loop</a>
+    <a href="#mechanics">Mechanics</a>
+    <a href="#worlds">SHIFT worlds</a>
+    <a href="#events">Events</a>
+    <a href="#bikes">Bikes &amp; tuning</a>
+    <a href="#first">First five minutes</a>
+    <a href="#progress">Progression</a>
+    <a href="#reuse">What we reuse</a>
+    <a href="#assets">Assets</a>
+    <a href="#schedule">Schedule</a>
+    <a href="#risks">Risks &amp; cuts</a>
+  </nav>
+
+  <main>
+    <div class="eyebrow">Game design document · Game Off 2026 · Theme: SHIFT</div>
+    <h1>BIKE<span class="slash">//</span>RUSH</h1>
+    <p class="sub">Working title. An arcade bicycle racer where you shift gears on the ground, shift your weight in the air, and shift worlds through portals mid-race.</p>
+    <div class="meta">
+      <span>Studio <b>Razorbill Studio</b></span>
+      <span>Engine <b>Unity 6 · URP</b></span>
+      <span>Platform <b>Web (itch.io) + Windows</b></span>
+      <span>Deadline <b>1 Dec 2026, 13:37 PST</b></span>
+      <span>Status <b>Plan, not started</b></span>
+    </div>
+
+    <section id="pitch">
+      <h2>The pitch</h2>
+      <p class="pitch">Pedal hard, launch off the ridge, flip it, <em>stick the landing</em> and rip through a portal into another world, then drop back into the race three places ahead.</p>
+      <div class="grid3">
+        <div class="card"><span class="tag core">Feel</span><p>Fast, physical and a little dangerous. A clean landing feels like a reward; a bad one throws your rider into the dirt.</p></div>
+        <div class="card"><span class="tag core">Hook</span><p>Every big jump is a choice: play safe, go for a trick and boost, or aim for the SHIFT portal that warps you into a challenge world.</p></div>
+        <div class="card"><span class="tag core">Why bikes</span><p>Bikes are light enough to leave the ground all the time, so air time and tricks are part of every lap instead of a rare event.</p></div>
+      </div>
+    </section>
+
+    <section id="loop">
+      <h2>Core loop<small>One lap repeats this four to six times. Each step feeds the next.</small></h2>
+      <div class="loop" role="list">
+        <div class="step" role="listitem"><div class="n">ground</div><div class="w">Pedal</div><p>Sprint, draft rivals, keep your cadence up.</p></div>
+        <div class="step" role="listitem"><div class="n">ground</div><div class="w">Launch</div><p>Hit the lip of a jump, or bunny hop a bump.</p></div>
+        <div class="step shift" role="listitem"><div class="n">air</div><div class="w">Trick</div><p>Shift your weight: spins, flips, no-hander.</p></div>
+        <div class="step shift" role="listitem"><div class="n">air → ground</div><div class="w">Land</div><p>Press SHIFT as the wheels line up for a PERFECT.</p></div>
+        <div class="step" role="listitem"><div class="n">reward</div><div class="w">Boost</div><p>Trick value fills the boost tank, chains multiply it.</p></div>
+        <div class="step shift" role="listitem"><div class="n">big jumps</div><div class="w">Portal</div><p>Fly through a SHIFT ring to warp into a world.</p></div>
+      </div>
+      <p class="loopnote">Magenta steps are where the SHIFT theme lives. Boost feeds speed, speed feeds bigger air, bigger air feeds better tricks.</p>
+    </section>
+
+    <section id="mechanics">
+      <h2>Mechanics<small>Two skills at the core, one kept light so new players aren't overloaded.</small></h2>
+
+      <div class="mechanic"><div class="k">Riding</div><div>
+        <p>Built on Simple Bicycle Physics: a real two-wheel rig with scripted lean, so the bike never falls over on its own. Pedal <span class="kbd">W</span>, brake <span class="kbd">S</span>, steer and lean <span class="kbd">A</span> <span class="kbd">D</span>, hop by holding then releasing <span class="kbd">Space</span>.</p>
+        <p>The pack's sprint becomes <b>boost</b>: hold <span class="kbd">Shift</span> to burn it. Boost only comes from tricks, drafting and close calls, never for free.</p>
+      </div></div>
+
+      <div class="mechanic"><div class="k">Tricks</div><div>
+        <p>In the air, steering spins the bike and pedal / brake flips it forward / back. <span class="kbd">Ctrl</span> held through take-off is a <b>wheelie launch</b> for extra height. Each rotation counts: 180, 360, 540, front flip, back flip, and combos of both.</p>
+        <p>Trick value = rotation + air time + variety. Repeating the same trick in a row pays less, so players mix it up.</p>
+      </div></div>
+
+      <div class="mechanic"><div class="k">Landing</div><div>
+        <p>The moment that decides everything. A ring on the HUD closes as the ground approaches; press <span class="kbd">Shift</span> when it meets the target.</p>
+        <ul>
+          <li><b>PERFECT</b>: full trick value as boost, plus a speed kick out of the landing.</li>
+          <li><b>CLEAN</b>: wheels straight, no press. Normal trick value.</li>
+          <li><b>SKETCHY</b>: off-angle. Half value, you lose speed.</li>
+          <li><b>BAIL</b>: way off. Ragdoll, a 2-second reset, no boost.</li>
+        </ul>
+        <p>Reuses the SHIFT//RUSH timing diamond, already built and liked in testing.</p>
+      </div></div>
+
+      <div class="mechanic"><div class="k">Chains</div><div>
+        <p>Land, then take off again within 3 seconds and the chain multiplier climbs: x2, x3, up to x5. Slipstream, close calls and wall skims from SHIFT//RUSH also count as links.</p>
+      </div></div>
+
+      <div class="mechanic"><div class="k">Gears (light)</div><div>
+        <p>Gears shift automatically, with a cadence needle on the speedo. Players who tap <span class="kbd">Q</span> / <span class="kbd">E</span> as the needle hits green get a <b>Perfect Shift</b> nudge of speed and a sliver of boost. Optional skill, never required.</p>
+        <p><span class="tag stretch">Stretch</span> full manual gears with climbs that punish the wrong gear.</p>
+      </div></div>
+    </section>
+
+    <section id="worlds">
+      <h2>SHIFT worlds<small>Portals hang over the biggest jump on each course, one or two per lap.</small></h2>
+      <p>Fly through the ring with a trick in progress and the world shifts: slow-mo flash, then you land in a 10 to 15 second challenge somewhere else. Finish it in time and you drop back into the race higher up, with boost. Run out of time and you keep a share of the gain, never ending further back than where you left. A leader keeps their lead.</p>
+      <div class="grid2">
+        <div class="card"><span class="tag core">World 1</span><h3>Neon Pump Track</h3><p>A glowing BMX track in the dark. Pump the rollers in rhythm, every crest hit on the beat is a speed burst. Teaches flow.</p></div>
+        <div class="card"><span class="tag core">World 2</span><h3>Rooftop Gaps</h3><p>City rooftops at sunset, gaps between buildings. Bunny hop and boost to clear them before the timer runs out.</p></div>
+        <div class="card"><span class="tag stretch">World 3</span><h3>Trick Arena</h3><p>A bowl of ramps. Land as many tricks as you can in 12 seconds; the score sets how far you jump ahead.</p></div>
+        <div class="card"><span class="tag stretch">World 4</span><h3>Gear Climb</h3><p>A brutal hill. Only perfect gear shifts get you to the top in time.</p></div>
+      </div>
+    </section>
+
+    <section id="events">
+      <h2>Events<small>Several event types share the same courses, so a few tracks give lots of variety.</small></h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Event</th><th>What wins</th><th>What it tests</th><th>Scope</th></tr></thead>
+        <tbody>
+          <tr><td><b>Race</b></td><td>First over the line after 2 to 3 laps against 5 rivals</td><td>Everything: lines, drafting, tricks, portals</td><td><span class="tag core">Core</span></td></tr>
+          <tr><td><b>Downhill</b></td><td>Fastest single run to the bottom</td><td>Big air, landings, nerve</td><td><span class="tag core">Core</span></td></tr>
+          <tr><td><b>Time Trial</b></td><td>Beat your best time and your own ghost</td><td>Clean lines; the pack's ride recorder already makes ghosts</td><td><span class="tag core">Core</span></td></tr>
+          <tr><td><b>Trick Jam</b></td><td>Highest trick score in 90 seconds</td><td>Variety, chains, landings</td><td><span class="tag stretch">Stretch</span></td></tr>
+          <tr><td><b>Elimination</b></td><td>Survive: last place drops out each lap</td><td>Pressure, consistency</td><td><span class="tag stretch">Stretch</span></td></tr>
+          <tr><td><b>Sprint Duel</b></td><td>Short drag to the line against one rival</td><td>Boost timing, perfect shifts</td><td><span class="tag after">After jam</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout"><b>Courses for the jam:</b> two. <b>Ridge Line</b>, a mountain road with big jumps (Race, Time Trial), and <b>Pine Drop</b>, a downhill forest trail (Downhill, Time Trial). Bikes ride at 30 to 65 km/h, so courses are 600 m to 1.2 km, about a third of SHIFT//RUSH's tracks.</div>
+    </section>
+
+    <section id="bikes">
+      <h2>Bikes &amp; tuning<small>Three bikes at launch, each with a clear personality. Tuning is four sliders, not a garage simulator.</small></h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Bike</th><th>Personality</th><th>Speed</th><th>Air</th><th>Grip</th></tr></thead>
+        <tbody>
+          <tr><td><b>Ridgeback</b> (mountain bike)</td><td>The all-rounder. Forgiving landings.</td><td class="stat"><span class="bar" style="width:42px"></span> 6</td><td class="stat"><span class="bar" style="width:42px"></span> 6</td><td class="stat"><span class="bar" style="width:56px"></span> 8</td></tr>
+          <tr><td><b>Kestrel</b> (BMX)</td><td>Tiny, twitchy, born for tricks. Spins fastest.</td><td class="stat"><span class="bar" style="width:28px"></span> 4</td><td class="stat"><span class="bar" style="width:63px"></span> 9</td><td class="stat"><span class="bar" style="width:35px"></span> 5</td></tr>
+          <tr><td><b>Gravity</b> (downhill bike)</td><td>Heavy and fast, eats rough ground, hard to flip.</td><td class="stat"><span class="bar" style="width:63px"></span> 9</td><td class="stat"><span class="bar" style="width:28px"></span> 4</td><td class="stat"><span class="bar" style="width:49px"></span> 7</td></tr>
+        </tbody>
+      </table></div>
+      <div class="grid2">
+        <div class="card"><h3>Tuning sliders</h3><ul>
+          <li><b>Gearing</b>: quick pick-up ↔ higher top speed</li>
+          <li><b>Tyres</b>: slick and fast ↔ knobbly and grippy</li>
+          <li><b>Suspension</b>: stiff and responsive ↔ soft and forgiving</li>
+          <li><b>Frame weight</b>: light and agile in the air ↔ stable at speed</li>
+        </ul><p>Each maps to a value the bike physics already has (torque, top speed, wheel friction, suspension, mass), so tuning is a real change in feel.</p></div>
+        <div class="card"><h3>Look</h3><p>Pick a rider from the pack's riders (MTB riders, girl biker, cyclist), a bike paint and a helmet colour. Small, but it makes the bike yours on day one.</p><p><span class="tag stretch">Stretch</span> unlockable paints for trick milestones.</p></div>
+      </div>
+    </section>
+
+    <section id="first">
+      <h2>First five minutes<small>What a jam judge sees. If this is fun, they keep playing.</small></h2>
+      <ol class="flow">
+        <li data-t="0:00"><div><b>Splash, then straight into the menu</b><span>The rider idles on a turning plinth. One button: RIDE.</span></div></li>
+        <li data-t="0:20"><div><b>Make your rider</b><span>Name, rider, paint. Three choices, ten seconds, skippable.</span></div></li>
+        <li data-t="0:40"><div><b>First run: Ridge Line, guided</b><span>The coach card teaches pedal, steer, hop, then the first jump and the landing press. No rivals, no timer.</span></div></li>
+        <li data-t="2:00"><div><b>First trick and first portal</b><span>A gentle ramp with a portal over it. Clear it and you're in the Neon Pump Track. Every first-timer gets to see a SHIFT world.</span></div></li>
+        <li data-t="3:00"><div><b>First race, on CRUISE</b><span>Five rivals, two laps. Tuned so a new player can win with one good portal.</span></div></li>
+        <li data-t="5:00"><div><b>Win screen with an unlock</b><span>"KESTREL BMX UNLOCKED" plus the next event. A reason for one more run.</span></div></li>
+      </ol>
+    </section>
+
+    <section id="progress">
+      <h2>Progression<small>Light, so a judge sees something new every few minutes.</small></h2>
+      <div class="grid3">
+        <div class="card"><span class="tag core">Stars</span><p>Each event awards up to 3 stars: finish, podium, and a challenge (land 5 perfects, use a portal, beat a time).</p></div>
+        <div class="card"><span class="tag core">Unlocks</span><p>Stars unlock the second and third bikes, the downhill course, the Time Trial ghost and tuning parts.</p></div>
+        <div class="card"><span class="tag core">Difficulty</span><p>CRUISE, RUSH, OVERDRIVE carry over from SHIFT//RUSH: rival pace, landing window, portal placings.</p></div>
+      </div>
+    </section>
+
+    <section id="reuse">
+      <h2>What we reuse<small>Already in the BikeRush project from SHIFT//RUSH. This is why the plan fits 17 days.</small></h2>
+      <div class="scroll"><table>
+        <thead><tr><th>System</th><th>Becomes</th></tr></thead>
+        <tbody>
+          <tr><td>SHIFT ramp → timing diamond → world → fair return</td><td>Portals, the landing press, SHIFT worlds</td></tr>
+          <tr><td>Rush bonuses (slipstream, close call, wall skim, chains)</td><td>Chain links between tricks</td></tr>
+          <tr><td>Race manager, rivals, HUD, minimap, results</td><td>Races and downhill runs</td></tr>
+          <tr><td>Difficulty levels, tutorial coach, settings, pause</td><td>The same, retuned for bikes</td></tr>
+          <tr><td>Menus, garage, track select, loading screen, credits</td><td>Rider and bike select, event select</td></tr>
+          <tr><td>Toon look and ink outlines, instanced scenery, web build fixes</td><td>The look and the performance</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="assets">
+      <h2>Assets<small>What we have and what's missing.</small></h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Area</th><th>Status</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Bikes and riders</td><td class="have">Have</td><td>Simple Bicycle Physics: 14 bikes, 4 riders, IK, ragdolls</td></tr>
+          <tr><td>UI, menus, fonts, UI sounds</td><td class="have">Have</td><td>Heat UI, AMS soft mask, UI SFX Mega Pack</td></tr>
+          <tr><td>Music</td><td class="have">Have</td><td>Pixabay tracks from SHIFT//RUSH, credited</td></tr>
+          <tr><td>Mountain and forest scenery</td><td class="have">Have</td><td>Synty Alpine (in SHIFTRUSH; bring over)</td></tr>
+          <tr><td>Portal and boost effects</td><td class="have">Have</td><td>Hovl Studio, GabrielAguiar thrusters (in SHIFTRUSH; bring over)</td></tr>
+          <tr><td>Course building</td><td class="have">Have</td><td>Spline Architect + our track builder (in SHIFTRUSH; bring over)</td></tr>
+          <tr><td>City rooftops (World 2)</td><td class="need">Need</td><td>A low-poly city pack, or build the rooftops from simple blocks in the neon style</td></tr>
+          <tr><td>Bike sounds</td><td class="need">Check</td><td>Pack has basic sounds; may need freewheel tick, chain, gear click, tyre on dirt, landing thud</td></tr>
+          <tr><td>Trick poses</td><td class="need">Check</td><td>Riders animate by IK; a no-hander or superman pose may need a few extra poses</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="schedule">
+      <h2>Schedule<small>17 days. Each block ends with something playable.</small></h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Dates</th><th>Milestone</th><th>Playable at the end</th></tr></thead>
+        <tbody>
+          <tr><td class="date">14 Nov</td><td>Plan agreed, project set up</td><td>Demo bike rides in BikeRush <span class="have">✓ done</span></td></tr>
+          <tr><td class="date">15–16 Nov</td><td>Bike in our systems: adapter, our controls, boost</td><td>Ride our bike with our HUD and settings</td></tr>
+          <tr><td class="date">17–19 Nov</td><td>Tricks, landing press, bails, chains</td><td>A jump park where tricks earn boost</td></tr>
+          <tr><td class="date">19–21 Nov</td><td>Ridge Line course, laps, 5 bike rivals</td><td>A full race against AI riders</td></tr>
+          <tr><td class="date">22–24 Nov</td><td>Portals and two SHIFT worlds</td><td>The full core loop</td></tr>
+          <tr><td class="date">25–26 Nov</td><td>Three bikes, tuning, rider setup, Pine Drop</td><td>Garage and the second course</td></tr>
+          <tr><td class="date">27 Nov</td><td>Time Trial with ghost, stars and unlocks</td><td>Progression</td></tr>
+          <tr><td class="date">28–29 Nov</td><td>First five minutes, coach, difficulty, sound, polish</td><td>The judge's experience</td></tr>
+          <tr><td class="date">30 Nov</td><td>Web build, download size, itch page, devlog</td><td>Release candidate</td></tr>
+          <tr><td class="date">1 Dec</td><td>Submit before 13:37 PST</td><td>Shipped</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="risks">
+      <h2>Risks &amp; cuts<small>Decided now, so we never panic-cut later.</small></h2>
+      <div class="grid2">
+        <div class="card"><h3>Biggest risks</h3><ul>
+          <li><b>AI riders</b>: the pack has no real AI. We adapt SHIFT//RUSH's rival driver; if it fights the bike physics, rivals ride on a simplified rig.</li>
+          <li><b>Landing feel</b>: the whole game hangs on it. It gets the most playtesting.</li>
+          <li><b>Download size</b>: SHIFT//RUSH's web build was 185 MB. Cap textures for web from day one.</li>
+        </ul></div>
+        <div class="card"><h3>Cut order if we run late</h3><ul>
+          <li>1. Gear Climb and Trick Arena worlds</li>
+          <li>2. Manual gears (keep the auto-gear needle)</li>
+          <li>3. Elimination and Trick Jam events</li>
+          <li>4. Paint unlocks</li>
+          <li>Never cut: tricks, landing press, one portal world, one race, first five minutes</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <footer>Razorbill Studio · BikeRush design v1 · 14 November 2026 · Concept and inspiration: Jennifer Ugwoke</footer>
+  </main>
+</div>
