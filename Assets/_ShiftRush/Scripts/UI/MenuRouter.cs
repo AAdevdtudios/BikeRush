@@ -4,13 +4,13 @@ using UnityEngine;
 namespace ShiftRush.UI
 {
     /// <summary>
-    /// Moves between the menu's screens on top of Heat's PanelManager: Home → Garage → Tracks, plus Settings
+    /// Moves between the menu's screens on top of Heat's PanelManager: Home → Garage (bike shed) → Tune → Tracks, plus Settings
     /// and Credits. Back (Esc / B) goes one screen up; on Home it asks to quit. Also tells the showroom
-    /// camera how to frame the car for each screen.
+    /// camera how to frame the bike for each screen.
     /// </summary>
     public class MenuRouter : MonoBehaviour
     {
-        public const string Home = "Home", Garage = "Garage", Tracks = "Tracks", Settings = "Settings";
+        public const string Home = "Home", Garage = "Garage", Tune = "Tune", Tracks = "Tracks", Settings = "Settings";
 
         [SerializeField] PanelManager panels;
         [SerializeField] Showroom showroom;
@@ -27,6 +27,7 @@ namespace ShiftRush.UI
 
         public void OpenHome() { Open(Home); }
         public void OpenGarage() { Open(Garage); }
+        public void OpenTune() { Open(Tune); }
         public void OpenTracks() { Open(Tracks); }
         public void OpenSettings() { Open(Settings); }
 
@@ -37,7 +38,7 @@ namespace ShiftRush.UI
             panels.OpenPanel(panel);
             if (showroom != null)
             {
-                if (panel == Garage) showroom.FrameGarage();
+                if (panel == Garage || panel == Tune) showroom.FrameGarage();
                 else if (panel == Tracks) showroom.FrameTracks();
                 else showroom.FrameHome();
             }
@@ -74,7 +75,8 @@ namespace ShiftRush.UI
             MenuSounds.Back();
             switch (current)
             {
-                case Tracks: Open(Garage); break;
+                case Tracks: Open(Tune); break;
+                case Tune: Open(Garage); break;
                 case Garage:
                 case Settings: Open(Home); break;
                 default: AskQuit(); break;

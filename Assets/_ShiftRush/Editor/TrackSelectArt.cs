@@ -83,7 +83,9 @@ namespace ShiftRush.EditorTools
                 cam.fieldOfView = 22f;
                 cam.nearClipPlane = 0.1f; cam.farClipPlane = 200f;
                 float radius = b.extents.magnitude;
-                float dist = radius / Mathf.Sin(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 0.52f;
+                // Long, low cars fill the wide frame; a bike with its rider is tall, so it needs the camera further back.
+                float tall = Mathf.InverseLerp(0.3f, 0.8f, b.size.y / Mathf.Max(0.01f, Mathf.Max(b.size.x, b.size.z)));
+                float dist = radius / Mathf.Sin(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * Mathf.Lerp(0.52f, 0.7f, tall);
                 cam.transform.position = b.center + dir * dist;
                 cam.transform.LookAt(b.center + Vector3.down * b.extents.y * 0.15f);
 

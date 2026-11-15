@@ -51,7 +51,7 @@ namespace ShiftRush.EditorTools
             Place(head.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 1), new Vector2(0, -22), new Vector2(0, 74));
             var chain = Txt(pop, "Chain", "x2", fontTitle, 44, Magenta, TextAlignmentOptions.Right);
             Place(chain.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(0, 8), new Vector2(0, 50));
-            var detail = Txt(pop, "Detail", "+6% NITRO", fontBold, 22, Steel, TextAlignmentOptions.Right);
+            var detail = Txt(pop, "Detail", "+6% BOOST", fontBold, 22, Steel, TextAlignmentOptions.Right);
             detail.characterSpacing = 10;
             Place(detail.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-96, 18), new Vector2(-96, 30));
 

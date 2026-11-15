@@ -238,7 +238,7 @@ namespace ShiftRush.EditorTools
             var nos = new GameObject("Nitro", typeof(RectTransform)).GetComponent<RectTransform>();
             nos.SetParent(br, false);
             Place(nos, new Vector2(1, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-90, 34), new Vector2(280, 14));
-            var nosLabel = Txt(nos, "Label", "NOS", fontBold, 18, Steel, TextAlignmentOptions.Right);
+            var nosLabel = Txt(nos, "Label", "BOOST", fontBold, 18, Steel, TextAlignmentOptions.Right);
             nosLabel.characterSpacing = 8;
             Place(nosLabel.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(1, 0.5f), new Vector2(-12, 0), new Vector2(80, 24));
             var nosBg = Img(nos, "Bg", slant, new Color(1, 1, 1, 0.12f));

@@ -88,7 +88,12 @@ namespace ShiftRush.Race
                 if (mb is IVehicle v)
                 {
                     AddRacer(v, "YOU", true);
-                    if (v is BikeVehicleAdapter bike && Line != null) bike.Guide = TrackGuide.Attach(bike.gameObject, Line);
+                    if (v is BikeVehicleAdapter bike)
+                    {
+                        if (Line != null) bike.Guide = TrackGuide.Attach(bike.gameObject, Line);
+                        var choice = Core.RaceSession.Car; // the set-up from the Tune screen
+                        if (choice != null) bike.ApplyTuning(Core.BikeTuning.Load(choice.id));
+                    }
                     break;
                 }
             RaceGrid.Fill(this, Player); // grid slots and the rivals

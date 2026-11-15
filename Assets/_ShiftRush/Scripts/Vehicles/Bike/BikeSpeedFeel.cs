@@ -14,7 +14,7 @@ namespace ShiftRush.Vehicles
         [SerializeField] float baseFov = 68f;
         [SerializeField] float fastFov = 92f;
         [Tooltip("Speed (km/h) at which the lens is fully open.")]
-        [SerializeField] float fastKmh = 110f;
+        [SerializeField] float fastKmh = 86f;
         [SerializeField] float boostKick = 6f;
         [SerializeField] float chaseDistance = 3.6f;
         [SerializeField] float chaseHeight = 1.85f;
@@ -23,7 +23,7 @@ namespace ShiftRush.Vehicles
 
         [Header("Speed lines")]
         [Tooltip("Speed lines start at this speed (km/h) and are thickest at top boost speed.")]
-        [SerializeField] float linesFromKmh = 66f, linesFullKmh = 112f;
+        [SerializeField] float linesFromKmh = 50f, linesFullKmh = 90f;
         [SerializeField] float linesPerSecond = 180f;
 
         Camera cam;
@@ -133,6 +133,13 @@ namespace ShiftRush.Vehicles
         void LateUpdate()
         {
             if (cam == null) return;
+            // The pack's camera follows whichever bike it finds first: in a race, always the player's.
+            var race = ShiftRush.Race.RaceManager.Current;
+            if (chase != null && race != null && race.Player != null && race.Player.vehicle != null)
+            {
+                var me = race.Player.vehicle.Transform;
+                if (me != null && (chase.target == null || chase.target.root != me.root)) { chase.target = me; bike = null; }
+            }
             if (bike == null && chase != null && chase.target != null) bike = chase.target.GetComponentInParent<BikeVehicleAdapter>();
             float kmh = bike != null ? Mathf.Abs(bike.SpeedKmh) : 0f;
             float t = Mathf.Clamp01(kmh / fastKmh);
@@ -145,7 +152,7 @@ namespace ShiftRush.Vehicles
             fov = Mathf.Lerp(fov, want, 1f - Mathf.Exp(-4f * Time.unscaledDeltaTime));
             cam.fieldOfView = fov;
             EmitLines(kmh, boosting);
-            if (blur != null) blur.intensity.value = blurAtSpeed * Mathf.InverseLerp(40f, fastKmh, kmh) * (boosting ? 1.25f : 1f);
+            if (blur != null) blur.intensity.value = blurAtSpeed * Mathf.InverseLerp(30f, fastKmh, kmh) * (boosting ? 1.25f : 1f);
 
             if (Time.timeScale > 0.9f && t > 0.4f)
             {

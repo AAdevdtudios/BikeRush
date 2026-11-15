@@ -160,7 +160,7 @@ namespace ShiftRush.Shift
                 SetSlow(false);
                 if (hud != null) hud.HideSelector();
                 if (tank != null) tank.SetNitroInput(true);
-                Reward(vehicle, consolationNitro, "+" + Mathf.RoundToInt(consolationNitro * 100f) + "% NITRO", "MISSED THE SHIFT  //  " + hits + " OF " + hitsNeeded);
+                Reward(vehicle, consolationNitro, "+" + Mathf.RoundToInt(consolationNitro * 100f) + "% BOOST", "MISSED THE SHIFT  //  " + hits + " OF " + hitsNeeded);
                 Done();
                 yield break;
             }
@@ -221,7 +221,7 @@ namespace ShiftRush.Shift
                 if (race != null) race.SetSuspended(race.Player, false);
             }
             Returned?.Invoke(vehicle);
-            Reward(vehicle, arena.Score, headline, arena.title + "  //  " + arena.Summary + "  //  +" + Mathf.RoundToInt(arena.Score * 100f) + "% NITRO");
+            Reward(vehicle, arena.Score, headline, arena.title + "  //  " + arena.Summary + "  //  +" + Mathf.RoundToInt(arena.Score * 100f) + "% BOOST");
             Done();
         }
 

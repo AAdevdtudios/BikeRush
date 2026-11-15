@@ -33,15 +33,52 @@ namespace ShiftRush.Vehicles
         [Tooltip("Height above the ground (m) at which the pack's stunt mode starts (its default is 5).")]
         [SerializeField] float trickHeight = 1.8f;
         [Tooltip("Pedalling speed on the flat (km/h). The pack's own 32 felt like a stroll.")]
-        [SerializeField] float cruiseKmh = 74f;
+        [SerializeField] float cruiseKmh = 58f;
         [Tooltip("Top speed while boosting (km/h).")]
-        [SerializeField] float boostKmh = 112f;
+        [SerializeField] float boostKmh = 86f;
         [Tooltip("Arcade launch: extra acceleration (m/s²) while pedalling below cruise speed. The pack alone takes ~4 s to get going.")]
-        [SerializeField] float launchAccel = 11f;
+        [SerializeField] float launchAccel = 8f;
         [Tooltip("Acceleration (m/s²) while boosting, up to boost speed.")]
-        [SerializeField] float boostAccel = 14f;
+        [SerializeField] float boostAccel = 9f;
         [Tooltip("Instant speed (m/s) added the moment boost kicks in.")]
-        [SerializeField] float boostKick = 4.5f;
+        [SerializeField] float boostKick = 3f;
+        [Tooltip("Extra pull down (m/s²) while the wheels are on the ground, so bumps and crests don't throw the bike off the trail. Kickers still launch.")]
+        [SerializeField] float groundStick = 14f;
+        [Tooltip("Boost pads: top speed while a pad's surge lasts (km/h).")]
+        [SerializeField] float padKmh = 96f;
+        [Tooltip("Upward shove (m/s) the moment the wheels leave the ground: a springy bike pops higher off kickers and crests.")]
+        [SerializeField] float takeoffPop = 0f;
+
+        /// <summary>This bike's own numbers, before the rider's set-up.</summary>
+        public BikeTuning.Numbers BaseNumbers
+        {
+            get
+            {
+                return baseNumbers ?? new BikeTuning.Numbers
+                {
+                    cruiseKmh = cruiseKmh, boostKmh = boostKmh, launchAccel = launchAccel, boostAccel = boostAccel,
+                    boostKick = boostKick, burnPerSecond = burnPerSecond, carveRate = carveRate, carveGrip = carveGrip,
+                    groundStick = groundStick, takeoffPop = takeoffPop,
+                };
+            }
+        }
+        BikeTuning.Numbers? baseNumbers;
+
+        /// <summary>Rides with the Tune screen's set-up (0..10 per slider, see <see cref="BikeTuning"/>).</summary>
+        public void ApplyTuning(int[] settings)
+        {
+            var b = BaseNumbers;
+            baseNumbers = b; // keep the bike's own numbers, so tuning twice doesn't stack
+            var n = BikeTuning.Apply(b, settings);
+            cruiseKmh = n.cruiseKmh; boostKmh = n.boostKmh; launchAccel = n.launchAccel; boostAccel = n.boostAccel;
+            boostKick = n.boostKick; burnPerSecond = n.burnPerSecond; carveRate = n.carveRate; carveGrip = n.carveGrip;
+            groundStick = n.groundStick; takeoffPop = n.takeoffPop;
+            if (bike != null)
+            {
+                bike.topSpeed = boostKmh / 3.6f;
+                bike.relaxedSpeed = Mathf.Clamp01(cruiseKmh / boostKmh);
+            }
+        }
         [Tooltip("Arcade carving: extra turn (degrees/second) at full steer on the ground. The pack alone manages about 0.35 g, so at race speed a bike can't hold a bend.")]
         [SerializeField] float carveRate = 70f;
         [Tooltip("How fast sideways slide is turned into forward speed (degrees/second): grip like a racing game.")]
@@ -123,11 +160,28 @@ namespace ShiftRush.Vehicles
         /// <summary>An AI rider is steering this bike (not the player).</summary>
         public bool IsAIDriven { get { return driven; } }
         public BicycleController Bike { get { return bike; } }
-        public bool NitroActive { get { return boosting; } }
+        public bool NitroActive { get { return boosting || surge > 0f; } }
+        /// <summary>Seconds left on a boost pad's surge.</summary>
+        public float Surge { get { return surge; } }
+        float surge;
+
+        /// <summary>
+        /// A boost pad: an instant shove along the pad, then a few seconds of free boost pace (no tank used).
+        /// </summary>
+        public void PadBoost(Vector3 direction, float kick, float seconds)
+        {
+            if (body == null || !controllable) return;
+            surge = Mathf.Max(surge, seconds);
+            Vector3 fwd = Vector3.ProjectOnPlane(direction, Vector3.up).normalized;
+            float along = Vector3.Dot(body.linearVelocity, fwd);
+            float add = Mathf.Clamp(padKmh / 3.6f - along, 0f, kick);
+            foreach (var rb in bodies) if (rb != null) rb.linearVelocity += fwd * add;
+        }
 
         void Awake()
         {
             bike = GetComponent<BicycleController>();
+            if (GetComponent<BikeRigWiring>() == null) gameObject.AddComponent<BikeRigWiring>();
             body = GetComponent<Rigidbody>();
             bodies = GetComponentsInChildren<Rigidbody>(true);
             bike.externalInput = true;
@@ -194,10 +248,16 @@ namespace ShiftRush.Vehicles
 
             // Boost: the pack's sprint, only while the tank has some, and only on the ground (Shift is the landing
             // press in the air).
-            boosting = boost && tank > 0f && controllable && AnyWheelGrounded;
+            // Run dry and boost stays off until you let go of the button: holding it on an empty tank used to
+            // flicker boost on every sliver of refill, and every flicker added the launch shove (a runaway bike).
+            bool want = boost && controllable && AnyWheelGrounded;
+            if (boosting && tank <= 0f) drained = true;
+            if (!boost) drained = false;
+            boosting = want && !drained && tank > 0f && (boosting || tank >= MinBoostStart);
             if (boosting) tank = Mathf.Max(0f, tank - burnPerSecond * dt);
             else if (regen) tank = Mathf.Min(1f, tank + regenPerSecond * dt);
-            bike.sprint = boosting;
+            bike.sprint = boosting || surge > 0f;
+            if (surge > 0f) surge = Mathf.Max(0f, surge - dt);
 
             // Rivals don't do stunts (yet): off a jump they're levelled for the landing, so they ride it out.
             if (driven)
@@ -210,6 +270,8 @@ namespace ShiftRush.Vehicles
 
         float aiAir;
         bool aiPosed;
+        bool drained;
+        const float MinBoostStart = 0.1f; // share of the tank needed to light boost
 
         /// <summary>Level with the ground below (matching a slope), facing the way the bike is travelling.</summary>
         public Quaternion LevelPose()
@@ -243,6 +305,7 @@ namespace ShiftRush.Vehicles
                     if (rb != body) rb.angularVelocity = Vector3.zero;
                 }
             }
+            Pop();
             if (!posed) { Carve(); Drive(); return; }
             if (body == null || !controllable) return;
             Quaternion want = poseFollow <= 0f ? poseTarget
@@ -260,19 +323,42 @@ namespace ShiftRush.Vehicles
             }
         }
 
-        bool kicked;
+        bool kicked, wasGrounded;
+
+        /// <summary>The springy set-up: a little hop the moment the wheels leave the dirt going forward.</summary>
+        void Pop()
+        {
+            bool grounded = AnyWheelGrounded;
+            if (wasGrounded && !grounded && takeoffPop > 0f && controllable && body != null && Vector3.Dot(body.linearVelocity, transform.forward) > 6f)
+                foreach (var rb in bodies) if (rb != null) rb.linearVelocity += Vector3.up * takeoffPop;
+            wasGrounded = grounded;
+        }
 
         /// <summary>Arcade pace: a quick launch up to cruise, a shove when boost lights, a hard pull while it burns.</summary>
         void Drive()
         {
             if (body == null || !controllable || !AnyWheelGrounded) { kicked = boosting && kicked; return; }
             float dt = Time.fixedDeltaTime;
+            // Keep the tyres on the dirt: a crest at speed used to fling bikes off the trail. Pressed into the
+            // ground (not straight down), so it doesn't slow the run-up a kicker's slope.
+            Vector3 n;
+            if (GroundBelow(body.position + Vector3.up * 0.5f, 2.5f, out n) < 2.5f)
+                foreach (var rb in bodies) if (rb != null) rb.linearVelocity -= n * groundStick * dt;
             Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
             float along = Vector3.Dot(body.linearVelocity, fwd);
             float accel = 0f;
-            if (boosting)
+            if (surge > 0f)
             {
-                if (!kicked) { kicked = true; foreach (var rb in bodies) if (rb != null) rb.linearVelocity += fwd * boostKick; }
+                if (along < padKmh / 3.6f) accel = boostAccel;
+            }
+            else if (boosting)
+            {
+                if (!kicked)
+                {
+                    kicked = true;
+                    float add = Mathf.Clamp(boostKmh / 3.6f - along, 0f, boostKick); // never past boost speed
+                    if (add > 0f) foreach (var rb in bodies) if (rb != null) rb.linearVelocity += fwd * add;
+                }
                 if (along < boostKmh / 3.6f) accel = boostAccel;
             }
             else

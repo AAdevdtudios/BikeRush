@@ -13,133 +13,78 @@ MonoBehaviour:
   m_Name: RaceCatalog
   m_EditorClassIdentifier: Assembly-CSharp::ShiftRush.Core.RaceCatalog
   cars:
-  - id: zephyr
-    displayName: Zephyr
-    tagline: Light, twitchy, loves a jump.
-    prefab: {fileID: 618919482974570354, guid: f7cef4fc8817248b58bee806fb810876, type: 3}
-    showroomPrefab: {fileID: 0}
-    topSpeed: 7
-    acceleration: 6
-    handling: 7
-    boost: 5
-    thumbnail: {fileID: 21300000, guid: b619e8c76a54f43569d285d174ec83c4, type: 3}
-    accent: {r: 1, g: 0.2509804, b: 0.8509804, a: 1}
-    cameraDistance: 0
-    cameraHeight: 0
-    nitroVfx: {fileID: 8877627154093148493, guid: 387c65f17c2b3714083c66fdf9747a17, type: 3}
-    nitroExhausts:
-    - {x: -0.252, y: -0.287, z: -2.288}
-    - {x: 0.252, y: -0.287, z: -2.288}
-    nitroRotation: {x: 0, y: -90, z: 0}
-    nitroScale: 0.3
-    nitroHide:
-    - SpaceshipMesh
-  - id: fireburst
-    displayName: Fireburst
-    tagline: Flat out or nothing. Twitchy at the limit.
-    prefab: {fileID: 8936669675758852984, guid: 4f9fd4e6cb93f454fb073e1396b51386, type: 3}
-    showroomPrefab: {fileID: 0}
-    topSpeed: 9
-    acceleration: 7
-    handling: 5
-    boost: 5
-    thumbnail: {fileID: 21300000, guid: c5267f73c4a8b44fc85f243b2ec1a554, type: 3}
-    accent: {r: 0.21960784, g: 0.88235295, b: 1, a: 1}
-    cameraDistance: 0
-    cameraHeight: 0
-    nitroVfx: {fileID: 3327366037713865010, guid: ee8dcc89d5f4eb240aa5312d61829a14, type: 3}
-    nitroExhausts:
-    - {x: -0.253, y: -0.032, z: -2.386}
-    - {x: 0.253, y: -0.032, z: -2.386}
-    nitroRotation: {x: 0, y: -90, z: 0}
-    nitroScale: 0.3
-    nitroHide:
-    - SpaceshipMesh
-  - id: predator
-    displayName: Predator
-    tagline: A race car on a leash. Corners like it's on rails.
-    prefab: {fileID: 8176232413722470093, guid: 9809cc2a9de8149c5b077fd5f60fa848, type: 3}
+  - id: switchback
+    displayName: Switchback
+    tagline: Does a bit of everything. The one to learn on.
+    prefab: {fileID: 6553954335680402524, guid: 6b4c7c22a6cc14c15832c42e2eb09c78, type: 3}
     showroomPrefab: {fileID: 0}
     topSpeed: 6
     acceleration: 6
-    handling: 9
+    handling: 6
+    boost: 6
+    air: 6
+    thumbnail: {fileID: 21300000, guid: 17429d1b4503e40aeb65d2e52d307750, type: 3}
+    accent: {r: 1, g: 0.2509804, b: 0.8509804, a: 1}
+    cameraDistance: 0
+    cameraHeight: 0
+    nitroVfx: {fileID: 0}
+    nitroExhausts: []
+    nitroRotation: {x: 0, y: 0, z: 0}
+    nitroScale: 1
+    nitroHide:
+    - SpaceshipMesh
+  - id: sparkplug
+    displayName: Sparkplug
+    tagline: Tiny, twitchy, off the line like a slingshot. Lives in the air.
+    prefab: {fileID: 3713638685242127417, guid: d09b75fc5e00145d29d7783dc1e05ddd, type: 3}
+    showroomPrefab: {fileID: 0}
+    topSpeed: 4
+    acceleration: 9
+    handling: 8
+    boost: 9
+    air: 9
+    thumbnail: {fileID: 21300000, guid: 0cd90263f264949fb842f66c268655ac, type: 3}
+    accent: {r: 0.21960784, g: 0.88235295, b: 1, a: 1}
+    cameraDistance: 0
+    cameraHeight: 0
+    nitroVfx: {fileID: 0}
+    nitroExhausts: []
+    nitroRotation: {x: 0, y: 0, z: 0}
+    nitroScale: 1
+    nitroHide:
+    - SpaceshipMesh
+  - id: landslide
+    displayName: Landslide
+    tagline: Long travel, huge top end. Turns like it's thinking about it.
+    prefab: {fileID: 5504812201193829874, guid: a207008f7f1004369b3fffa3e16a4bf7, type: 3}
+    showroomPrefab: {fileID: 0}
+    topSpeed: 9
+    acceleration: 4
+    handling: 4
     boost: 5
-    thumbnail: {fileID: 21300000, guid: 26fc0e6c100a244638400d1d6a29cdfe, type: 3}
+    air: 5
+    thumbnail: {fileID: 21300000, guid: d632f413426fa49c2a47e2c984573bbe, type: 3}
     accent: {r: 1, g: 0.5882353, b: 0.11764706, a: 1}
     cameraDistance: 0
     cameraHeight: 0
-    nitroVfx: {fileID: 4165431073209105999, guid: 6731f151230e91946b0017d22a6fd6a2, type: 3}
-    nitroExhausts:
-    - {x: -0.2, y: 0.078, z: -2.423}
-    - {x: 0.145, y: 0.078, z: -2.423}
-    nitroRotation: {x: 0, y: -90, z: 0}
-    nitroScale: 0.3
-    nitroHide:
-    - SpaceshipMesh
-  - id: blackout
-    displayName: Blackout
-    tagline: All muscle. The biggest, longest nitro burn.
-    prefab: {fileID: 8722409306801786800, guid: 95454484ab89e4318913057a58a109fd, type: 3}
-    showroomPrefab: {fileID: 0}
-    topSpeed: 7
-    acceleration: 8
-    handling: 4
-    boost: 9
-    thumbnail: {fileID: 21300000, guid: d6218476e1ca0476a9e44bfd192f2f9f, type: 3}
-    accent: {r: 0.15686275, g: 0.43137255, b: 1, a: 1}
-    cameraDistance: 0
-    cameraHeight: 0
-    nitroVfx: {fileID: 8541377478608203761, guid: a17730a999adbba4db276c01fced2652, type: 3}
-    nitroExhausts:
-    - {x: -0.468, y: -0.216, z: -2.947}
-    - {x: 0.448, y: -0.216, z: -2.947}
-    nitroRotation: {x: 0, y: -90, z: 0}
-    nitroScale: 0.36
-    nitroHide:
-    - SpaceshipMesh
-  - id: tetsuo
-    displayName: Tetsuo
-    tagline: Born sideways. Throw it in and hold the slide.
-    prefab: {fileID: 5810208036851785621, guid: 582f364dbd99247ecba80fd56335e945, type: 3}
-    showroomPrefab: {fileID: 0}
-    topSpeed: 7
-    acceleration: 7
-    handling: 7
-    boost: 6
-    thumbnail: {fileID: 21300000, guid: f53a20dc9800d4cc89896fba12abd76a, type: 3}
-    accent: {r: 1, g: 0.23529412, b: 0.3137255, a: 1}
-    cameraDistance: 0
-    cameraHeight: 0
-    nitroVfx: {fileID: 2868397938883470032, guid: 64c2a07ff6bc4564faae42475839b7c8, type: 3}
+    nitroVfx: {fileID: 0}
     nitroExhausts: []
-    nitroRotation: {x: 0, y: -90, z: 0}
-    nitroScale: 0.3
+    nitroRotation: {x: 0, y: 0, z: 0}
+    nitroScale: 1
     nitroHide:
     - SpaceshipMesh
   tracks:
-  - id: alpine
-    displayName: Alpine Pass
-    scene: Track_AlpinePass
-    description: Snow, switchbacks and a misty summit. Climb the hairpins, then dive
-      through the avalanche gallery.
-    lengthKm: 2.5
-    thumbnail: {fileID: 21300000, guid: 1edf2f524652c484d801673713f24afe, type: 3}
-    map: {fileID: 21300000, guid: d63e55460e5334446a89cfb30086a5d5, type: 3}
+  - id: ridgeline
+    displayName: Ridge Line
+    scene: Course_RidgeLine
+    description: 'A ridge trail above the pines: fast dirt, kickers, a cliff drop
+      and boost pads that make you pick a line.'
+    lengthKm: 0.9
+    thumbnail: {fileID: 21300000, guid: 5222b1df96e9c420f8a1e511913d3897, type: 3}
+    map: {fileID: 21300000, guid: 31a561891b87f488aae29e18b2f12319, type: 3}
     loadingTips:
-    - Brake before the hairpins, not in them.
-    - Hold Shift for nitro on the gallery straight.
-    - 'SHIFT ramp: press Shift as the diamonds meet.'
-    - R puts you back on your wheels.
-  - id: valley
-    displayName: Glacier Valley
-    scene: Track_GlacierValley
-    description: Flat-out sweepers around a glacier lake, over the river bridge and
-      through the village.
-    lengthKm: 2.3
-    thumbnail: {fileID: 21300000, guid: 11edc4d378ba74ad3b189cce8665f941, type: 3}
-    map: {fileID: 21300000, guid: 9a85447eafade4e1fba9cf32c5000a93, type: 3}
-    loadingTips:
-    - Keep it pinned through the lakeside sweepers.
-    - The bridge kink is flat out if you're brave.
-    - Hold Shift for nitro.
-    - 'SHIFT ramp: press Shift as the diamonds meet.'
+    - The trail steers with you. Lean into the stick to pick your line.
+    - Boost pads sit left, middle or right. Pick your line early.
+    - Hold Shift for boost on the ground. In the air, press it on the green.
+    - Hold Space to crouch, let go at the lip for more air.
+    - R puts you back on the trail.

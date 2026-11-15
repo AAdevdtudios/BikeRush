@@ -87,11 +87,14 @@ MonoBehaviour:
   tyreGrip: 1.6
   tricks: 1
   trickHeight: 1.8
-  cruiseKmh: 74
-  boostKmh: 112
-  launchAccel: 11
-  boostAccel: 14
-  boostKick: 4.5
+  cruiseKmh: 58
+  boostKmh: 86
+  launchAccel: 8
+  boostAccel: 9
+  boostKick: 3
+  groundStick: 14
+  padKmh: 96
+  takeoffPop: 0
   carveRate: 70
   carveGrip: 120
   guideGain: 3.5

@@ -17,9 +17,9 @@ using UnityEngine.UI;
 namespace ShiftRush.EditorTools
 {
     /// <summary>
-    /// Generates the SHIFT//RUSH main menu from Heat UI's desktop demo scene: restyles Heat, swaps the demo
+    /// Generates the BIKE//RUSH main menu from Heat UI's desktop demo scene: restyles Heat, swaps the demo
     /// content for the gear menu, garage, track select, real settings and credits, and builds the live showroom.
-    /// SHIFT RUSH → Build Main Menu. Re-running regenerates MainMenu.unity from scratch (hand edits there are lost;
+    /// BIKE RUSH → Menu → Build Main Menu. Re-running regenerates MainMenu.unity from scratch (hand edits there are lost;
     /// change this script or the RaceCatalog instead).
     /// </summary>
     public static partial class MenuBuilder
@@ -40,17 +40,18 @@ namespace ShiftRush.EditorTools
         static TMP_FontAsset fontTitle, fontBold, fontMedium, fontRegular, fontLight;
         static Sprite slant, slantFrame, streaks, chevron, fadeLeft, softBand;
 
-        [MenuItem("SHIFT RUSH/Build Main Menu")]
+        [MenuItem("BIKE RUSH/Menu/Build Main Menu")]
         public static void Build()
         {
             if (EditorApplication.isPlaying) { Debug.LogWarning("Stop Play mode first."); return; }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
+            MakeCatalog();
+            var catalog = MakeBikeCatalog(); // opens the trail for its photo, so first: everything after loads afresh
             LoadFonts();
             MakeArt();
             var sounds = LoadSounds();
             StyleHeat(sounds);
-            var catalog = MakeCatalog();
             MakeCarPictures(catalog);
             MakeTrackMaps(catalog);
             var credits = MakeCreditsPreset();
@@ -68,7 +69,7 @@ namespace ShiftRush.EditorTools
             AssetDatabase.CopyAsset(HeatScene, ScenePath);
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             var canvas = GameObject.Find("Canvas - Main Menu").transform;
-            canvas.name = "Canvas - SHIFT RUSH";
+            canvas.name = "Canvas - BIKE RUSH";
 
             var showroom = BuildShowroom();
             var router = new GameObject("Menu Router").AddComponent<MenuRouter>();
@@ -81,17 +82,19 @@ namespace ShiftRush.EditorTools
             RemoveDemoContent(canvas);
             var panels = canvas.Find("Main Content").GetComponent<PanelManager>();
             var home = BuildHome(canvas, router, showroom);
+            var tune = BuildTune(canvas, router, showroom);
             var garage = BuildGarage(canvas, router, showroom);
             var tracks = BuildTracks(canvas, router, showroom);
             BuildSettings(canvas, router);
-            BuildPanelList(panels, home, garage, tracks, canvas.Find("Main Content/Settings").GetComponent<Animator>());
+            BuildPanelList(panels, home, garage, tune, tracks, canvas.Find("Main Content/Settings").GetComponent<Animator>());
             var creditsManager = BuildCredits(canvas, credits);
             var quit = BuildQuitWindow(canvas, router);
             BuildSplash(canvas);
             BuildHintBar(canvas);
-            Hint(home.transform.Find("Content"), "<color=#FF40D9>W S</color>  SHIFT     <color=#FF40D9>1 2 3 R</color>  JUMP     <color=#FF40D9>ENTER</color>  ENGAGE");
-            Hint(garage.transform.Find("Content"), "<color=#FF40D9>A D</color>  CHANGE CAR     <color=#FF40D9>ENTER</color>  SELECT");
-            Hint(tracks.transform.Find("Content"), "<color=#FF40D9>A D</color>  CHANGE TRACK     <color=#FF40D9>W S</color>  DIFFICULTY     <color=#FF40D9>ENTER</color>  RACE");
+            Hint(home.transform.Find("Content"), "<color=#FF40D9>W S</color>  SHIFT GEAR     <color=#FF40D9>1 2 3 R</color>  JUMP TO     <color=#FF40D9>ENTER</color>  ENGAGE");
+            Hint(garage.transform.Find("Content"), "<color=#FF40D9>A D</color>  CHANGE BIKE     <color=#FF40D9>ENTER</color>  TUNE IT");
+            Hint(tune.transform.Find("Content"), "<color=#FF40D9>W S</color>  PICK     <color=#FF40D9>A D</color>  ADJUST     <color=#FF40D9>R</color>  STOCK     <color=#FF40D9>ENTER</color>  RIDE ON");
+            Hint(tracks.transform.Find("Content"), "<color=#FF40D9>A D</color>  CHANGE TRAIL     <color=#FF40D9>W S</color>  DIFFICULTY     <color=#FF40D9>ENTER</color>  RACE");
 
             var so = new SerializedObject(router);
             so.FindProperty("panels").objectReferenceValue = panels;
@@ -103,7 +106,7 @@ namespace ShiftRush.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             SetBuildScenes();
-            Debug.Log("[SHIFT//RUSH] Main menu built: " + ScenePath);
+            Debug.Log("[BIKE//RUSH] Main menu built: " + ScenePath);
         }
 
         // ------------------------------------------------------------------ assets
@@ -236,7 +239,7 @@ namespace ShiftRush.EditorTools
             ui.enableSplashScreen = true;
             ui.showSplashScreenOnce = true;
             ui.pakType = UIManager.PressAnyKeyTextType.Default; // "Default" is the one that reads pakText
-            ui.pakText = "Press {Any Key} To Shift";
+            ui.pakText = "Press {Any Key} To Ride";
             EditorUtility.SetDirty(ui);
             AssetDatabase.SaveAssetIfDirty(ui);
         }
@@ -274,19 +277,16 @@ namespace ShiftRush.EditorTools
             preset.mentions.Clear();
             System.Action<string, string[]> add = (h, items) =>
                 preset.credits.Add(new CreditsPreset.CreditsSection { headerTitle = h, headerTitleKey = "", items = new List<string>(items) });
-            add("Razorbill Studio", new[] { "Design, code and level design" });
+            add("Razorbill Studio", new[] { "Design, code and trail building" });
             add("Concept & Inspiration", new[] { "Jennifer Ugwoke" });
             add("Made for", new[] { "GitHub Game Off 2026", "Theme: SHIFT" });
             add("Built with", new[] { "Unity 6 (URP)" });
             add("Third-party packs", new[]
             {
-                "Realistic Car Controller Pro (BoneCracker Games)",
-                "ARCADE: Ultimate Vehicles Pack",
-                "Spline Architect",
-                "POLYGON Alpine Mountain (Synty)",
-                "KROMA: Atmosphere Toolkit (FayLabs)",
-                "MicroVerse (Jason Booth)",
+                "Simple Bicycle Physics",
+                "POLYGON Nature Biomes (Synty)",
                 "Heat: Complete Modern UI (Michsky)",
+                "UI Soft Mask (AMS)",
                 "UI SFX Mega Pack",
             });
             add("Music", new[]
@@ -300,7 +300,7 @@ namespace ShiftRush.EditorTools
             preset.mentions.Add(new CreditsPreset.MentionSection
             {
                 ID = "thanks",
-                description = "Thanks for playing SHIFT//RUSH.",
+                description = "Thanks for riding BIKE//RUSH.",
                 descriptionKey = "",
             });
             EditorUtility.SetDirty(preset);
@@ -398,11 +398,11 @@ namespace ShiftRush.EditorTools
             var ringMat = Mat("M_ShowroomRing", Magenta, 0.5f, 0f, Magenta * 2.2f);
 
             var floor = Prim(PrimitiveType.Cylinder, "Floor", root.transform, new Vector3(0, -0.06f, 0), new Vector3(70, 0.05f, 70), floorMat);
-            var plinth = Prim(PrimitiveType.Cylinder, "Plinth", turntable, new Vector3(0, -0.04f, 0), new Vector3(6.4f, 0.04f, 6.4f), plinthMat);
-            var ring = Prim(PrimitiveType.Cylinder, "Glow Ring", root.transform, new Vector3(0, -0.055f, 0), new Vector3(7.3f, 0.02f, 7.3f), ringMat);
+            var plinth = Prim(PrimitiveType.Cylinder, "Plinth", turntable, new Vector3(0, -0.04f, 0), new Vector3(3.6f, 0.04f, 3.6f), plinthMat); // a bike, not a car: a smaller stage
+            var ring = Prim(PrimitiveType.Cylinder, "Glow Ring", root.transform, new Vector3(0, -0.055f, 0), new Vector3(4.2f, 0.02f, 4.2f), ringMat);
 
             // Lights: a soft key from above, magenta and cyan rims behind.
-            AddLight(root.transform, "Key", LightType.Spot, new Vector3(0, 7, 1.5f), new Vector3(80, 200, 0), Color.white, 320f, 20f, 62f);
+            AddLight(root.transform, "Key", LightType.Spot, new Vector3(0, 7, 1.5f), new Vector3(80, 200, 0), Color.white, 150f, 20f, 62f); // a rider in a light jersey blows out under a car-strength key
             AddLight(root.transform, "Rim Magenta", LightType.Point, new Vector3(-4.5f, 1.6f, 3.5f), Vector3.zero, Magenta, 40f, 12f, 0f);
             AddLight(root.transform, "Rim Cyan", LightType.Point, new Vector3(4.5f, 1.4f, 3.2f), Vector3.zero, Cyan, 26f, 12f, 0f);
             foreach (var l in Object.FindObjectsByType<UnityEngine.Light>(FindObjectsSortMode.None))
@@ -477,8 +477,13 @@ namespace ShiftRush.EditorTools
             so.FindProperty("turntable").objectReferenceValue = turntable;
             so.FindProperty("cam").objectReferenceValue = cam;
             so.FindProperty("orbitPivot").objectReferenceValue = pivot;
-            so.FindProperty("homeOffset").vector3Value = new Vector3(-2.7f, 0.2f, 0f);
-            so.FindProperty("garageOffset").vector3Value = new Vector3(0f, -1.0f, 0.6f);
+            // Framed for a bike (~1.8 m long, against a car's ~4.5 m).
+            so.FindProperty("homeOffset").vector3Value = new Vector3(-1.3f, -0.15f, 0f);
+            so.FindProperty("homeDistance").floatValue = 6.8f;
+            so.FindProperty("garageOffset").vector3Value = new Vector3(0f, 0.15f, 0.3f);
+            so.FindProperty("garageDistance").floatValue = 7.6f;
+            so.FindProperty("tracksOffset").vector3Value = new Vector3(-1.75f, -0.2f, 0f);
+            so.FindProperty("tracksDistance").floatValue = 4.4f;
             var hide = so.FindProperty("hideWhenPosed");
             hide.arraySize = 3;
             hide.GetArrayElementAtIndex(0).objectReferenceValue = floor;
@@ -603,7 +608,7 @@ namespace ShiftRush.EditorTools
             Object.DestroyImmediate(content.Find("Box Container").gameObject);
 
             // Title block, top left.
-            var title = Txt(content, "Title", "SHIFT<color=#FF40D9>//</color>RUSH", fontTitle, 150, Color.white, TextAlignmentOptions.Left);
+            var title = Txt(content, "Title", "BIKE<color=#FF40D9>//</color>RUSH", fontTitle, 150, Color.white, TextAlignmentOptions.Left);
             title.characterSpacing = -2;
             Place(title.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(120, -110), new Vector2(1100, 170));
             var stripe = Img(content, "Title Stripe", slant, Magenta);
@@ -632,7 +637,7 @@ namespace ShiftRush.EditorTools
             var gearMenu = list.gameObject.AddComponent<GearMenu>();
             var gears = new List<(string key, string label, string caption, UnityAction call, bool web)>
             {
-                ("1", "RACE", "Pick a car, pick a track", router.OpenGarage, false),
+                ("1", "RACE", "Pick a bike, tune it, pick a trail", router.OpenGarage, false),
                 ("2", "SETTINGS", "Controls, sound, graphics", router.OpenSettings, false),
                 ("3", "CREDITS", "Who made this", router.OpenCredits, false),
                 ("R", "QUIT", "Back to the desktop", router.AskQuit, true),
@@ -730,9 +735,9 @@ namespace ShiftRush.EditorTools
         {
             var panel = RepurposePanel(canvas, "Shop", MenuRouter.Garage);
             var content = panel.Find("Content");
-            Header(content, "GARAGE", "STEP 1 / 2   CHOOSE YOUR CAR");
+            Header(content, "BIKE SHED", "STEP 1 / 3   CHOOSE YOUR BIKE");
 
-            var nameText = Txt(content, "Car Name", "ZEPHYR", fontTitle, 128, Color.white, TextAlignmentOptions.Left);
+            var nameText = Txt(content, "Bike Name", "SWITCHBACK", fontTitle, 128, Color.white, TextAlignmentOptions.Left);
             Place(nameText.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 0), new Vector2(120, 210), new Vector2(900, 150));
             var tag = Txt(content, "Tagline", "", fontMedium, 28, Steel, TextAlignmentOptions.Left);
             Place(tag.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 0), new Vector2(126, 168), new Vector2(900, 44));
@@ -744,7 +749,7 @@ namespace ShiftRush.EditorTools
             var statsRoot = new GameObject("Stats", typeof(RectTransform)).GetComponent<RectTransform>();
             statsRoot.SetParent(content, false);
             Place(statsRoot, new Vector2(1, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-120, 236), new Vector2(620, 230));
-            string[] statNames = { "TOP SPEED", "ACCELERATION", "HANDLING", "NITRO" };
+            string[] statNames = { "TOP SPEED", "LAUNCH", "CARVE", "AIR" };
             var bars = new StatBar[4];
             for (int s = 0; s < 4; s++)
             {
@@ -789,7 +794,7 @@ namespace ShiftRush.EditorTools
             so.FindProperty("nextButton").objectReferenceValue = next;
             so.FindProperty("confirmButton").objectReferenceValue = confirm;
             so.ApplyModifiedPropertiesWithoutUndo();
-            UnityEventTools.AddVoidPersistentListener(csp.onConfirm, router.OpenTracks);
+            UnityEventTools.AddVoidPersistentListener(csp.onConfirm, router.OpenTune);
 
             CloneHotkeys(canvas.Find("Main Content/Home Panel"), content, router, "Back", router.Back);
             return panel.GetComponent<Animator>();
@@ -801,7 +806,7 @@ namespace ShiftRush.EditorTools
         {
             var panel = RepurposePanel(canvas, "Extras", MenuRouter.Tracks);
             var content = panel.Find("Content");
-            Header(content, "TRACKS", "STEP 2 / 2   CHOOSE A TRACK");
+            Header(content, "TRAILS", "STEP 3 / 3   CHOOSE A TRAIL");
 
             // Selected track's hero shot, soft-masked into a wide slanted band. It lives on its own canvas placed in
             // the showroom camera's space, far behind the car, so the live car sits in front of the track photo.
@@ -832,7 +837,7 @@ namespace ShiftRush.EditorTools
             heroStreaks.type = Image.Type.Tiled; heroStreaks.raycastTarget = false;
             Stretch(heroStreaks.rectTransform);
 
-            var title = Txt(content, "Track Title", "TEST ARENA", fontTitle, 96, Color.white, TextAlignmentOptions.Left);
+            var title = Txt(content, "Track Title", "RIDGE LINE", fontTitle, 96, Color.white, TextAlignmentOptions.Left);
             Place(title.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(120, 120), new Vector2(1000, 120));
             var desc = Txt(content, "Track Description", "", fontRegular, 28, Steel, TextAlignmentOptions.TopLeft);
             Place(desc.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 1), new Vector2(126, 50), new Vector2(760, 100));
@@ -841,13 +846,13 @@ namespace ShiftRush.EditorTools
             Place(details.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(128, 200), new Vector2(400, 40));
 
             // Right column: the car you picked in the garage (a picture, not the live model), then the circuit.
-            var carBox = SidePanel(content, "Your Car", "YOUR CAR", -110f, 220f);
+            var carBox = SidePanel(content, "Your Bike", "YOUR BIKE", -110f, 220f);
             var carPic = Img(carBox, "Car Picture", null, Color.white);
             carPic.raycastTarget = false; carPic.preserveAspect = true;
             Place(carPic.rectTransform, new Vector2(0, 0), new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -6), new Vector2(-40, -44));
-            var carName = Txt(carBox, "Car Name", "ZEPHYR", fontTitle, 34, Color.white, TextAlignmentOptions.BottomRight);
+            var carName = Txt(carBox, "Bike Name", "SWITCHBACK", fontTitle, 34, Color.white, TextAlignmentOptions.BottomRight);
             Place(carName.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-34, 12), new Vector2(-60, 44));
-            var mapBox = SidePanel(content, "Circuit", "CIRCUIT", -360f, 280f);
+            var mapBox = SidePanel(content, "Trail Map", "TRAIL MAP", -360f, 280f);
             var mapImg = Img(mapBox, "Circuit Line", null, new Color(0.66f, 0.68f, 0.74f, 0.75f)); // grey line
             mapImg.raycastTarget = false; mapImg.preserveAspect = true;
             Place(mapImg.rectTransform, new Vector2(0, 0), new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -12), new Vector2(-110, -84));
@@ -1053,7 +1058,7 @@ namespace ShiftRush.EditorTools
             ConfigureSelector(items["Language"], "Speed Effects", GameSettings.SpeedFxKey, GameSettings.SpeedFxLabels, 2,
                 "How hard the camera pulls back, widens and shakes at speed, with streaks and lens fringing.");
             ConfigureSwitch(items["Enable Hints"], "Camera Shake", GameSettings.CameraShakeKey, true,
-                "A light rumble on the chase camera at high speed and on nitro.");
+                "A light rumble on the chase camera at high speed and on boost.");
             ConfigureSwitch(items["Enable Subtitles"], "Reduced Motion", GameSettings.ReducedMotionKey, false,
                 "Removes speed streaks, lens distortion and shake, and halves the camera pull-back. Kinder if fast motion makes you queasy.");
             ConfigureSelector(items["Subtitle Scale"], "Speed Units", GameSettings.UnitsKey, new[] { "KM/H", "MPH" }, 0,
@@ -1062,16 +1067,16 @@ namespace ShiftRush.EditorTools
             SetDescription(items["UI Scale"], "Menu Scale", "Makes the menus bigger or smaller.");
             var mini = Object.Instantiate(items["Subtitle Scale"].gameObject, items["Subtitle Scale"].parent).transform;
             ConfigureSelector(mini, "Minimap", GameSettings.MinimapKey, GameSettings.MinimapLabels, 0,
-                "Local shows a faded patch of track around your car that turns with you. Full shows the whole circuit.");
+                "Local shows a faded patch of trail around your bike that turns with you. Full shows the whole trail.");
             var auto = Object.Instantiate(items["Enable Hints"].gameObject, items["Enable Hints"].parent).transform;
-            ConfigureSwitch(auto, "Auto Accelerate", GameSettings.AutoAccelerateKey, false,
-                "The car keeps the throttle down for you. You steer, brake and fire nitro. Braking still slows you and backs you up.");
+            ConfigureSwitch(auto, "Auto Pedal", GameSettings.AutoAccelerateKey, false,
+                "Your rider keeps pedalling for you. You steer, brake, hop and boost. Braking still slows you and backs you up.");
             var difficulty = Object.Instantiate(items["Subtitle Scale"].gameObject, items["Subtitle Scale"].parent).transform;
             ConfigureSelector(difficulty, "Difficulty", Difficulty.Key, Difficulty.Labels, Difficulty.Default,
-                "CRUISE: gentler rivals, a wider SHIFT window and more nitro, start 3rd. RUSH: the race as meant. OVERDRIVE: faster rivals who never wait, a tight SHIFT window, a SHIFT lands you P2-P4, start last. Also on the track select screen.");
+                "CRUISE: gentler rivals, a wider landing window and more boost, start 3rd. RUSH: the race as meant. OVERDRIVE: faster rivals who never wait, a tight landing window, start last. Also on the trail select screen.");
             var tutorial = Object.Instantiate(items["Enable Hints"].gameObject, items["Enable Hints"].parent).transform;
             ConfigureSwitch(tutorial, "Tutorial", GameSettings.TutorialKey, true,
-                "Coach hints in your first races: driving, SHIFT ramps, the timing, the worlds and nitro. For your first race only: they turn themselves off after it. Switch back on to see them again.");
+                "Coach hints in your first race: riding, kickers, stunts, the SHIFT landing and boost. They turn themselves off after it. Switch back on to see them again.");
             items["Speed Effects"] = items["Language"];
             // Order: auto accelerate, tutorial, difficulty, speed effects, shake, reduced motion, units, minimap, menu scale.
             auto.SetSiblingIndex(0);
@@ -1095,12 +1100,12 @@ namespace ShiftRush.EditorTools
             bindingRows.Sort((a, b) => a.GetSiblingIndex().CompareTo(b.GetSiblingIndex()));
             var binds = new (string label, string action, string comp, string part, string desc)[]
             {
-                ("Accelerate", "Throttle", "wasd", "positive", "Throttle."),
+                ("Pedal", "Throttle", "wasd", "positive", "Pedal. The trail does most of the steering for you."),
                 ("Brake / Reverse", "Brake", "wasd", "positive", "Brake, then reverse when stopped."),
                 ("Steer Left", "Steering", "wasd", "negative", ""),
                 ("Steer Right", "Steering", "wasd", "positive", ""),
-                ("Handbrake", "Handbrake", "keyboard", "positive", "Pull it to start a drift."),
-                ("Nitro", "NOS", "keyboard", "positive", "Hold for a burst of speed while the tank lasts."),
+                ("Hop", "Handbrake", "keyboard", "positive", "Hold to crouch, let go to hop. Hop off a kicker lip for more air."),
+                ("Boost / Land", "NOS", "keyboard", "positive", "On the ground: hold for boost while the tank lasts. In the air: press on the green to land a trick."),
                 ("Change Camera", "Change Camera", "", "", "Cycles the camera views."),
                 ("Look Back", "Look Back", "", "", "Hold to look behind you."),
             };
@@ -1127,7 +1132,7 @@ namespace ShiftRush.EditorTools
                 reset.SetSiblingIndex(bindingRows[bindingRows.Count - 1].GetSiblingIndex() + 1);
                 reset.name = "Reset Controls";
                 SetRowTitle(reset, "Reset Controls");
-                SetDescription(reset, "Reset Controls", "Puts every key back to the SHIFT//RUSH defaults.");
+                SetDescription(reset, "Reset Controls", "Puts every key back to the BIKE//RUSH defaults.");
                 var btn = reset.Find("Binding 1").GetComponent<ButtonManager>();
                 btn.buttonText = "RESET";
                 reset.GetComponent<BindingRow>().ConfigureReset(btn); // BindingRow hooks up the click at runtime
@@ -1137,8 +1142,8 @@ namespace ShiftRush.EditorTools
             var aud = FindRows(Deep(lists.Find("Audio"), "List"));
             SetDescription(aud["Master Volume"], "Master Volume", "Everything.");
             SetDescription(aud["Music Volume"], "Music Volume", "Menu and race music.");
-            SetRowTitle(aud["SFX Volume"], "Car & Effects");
-            SetDescription(aud["SFX Volume"], "Car & Effects", "Engines, tyres, crashes and nitro.");
+            SetRowTitle(aud["SFX Volume"], "Bike & Effects");
+            SetDescription(aud["SFX Volume"], "Bike & Effects", "Tyres, chains, landings, crashes and boost.");
             SetRowTitle(aud["UI Volume"], "Menu Sounds");
             SetDescription(aud["UI Volume"], "Menu Sounds", "Clicks, shifts and menu effects.");
             // Music: SHUFFLE ALL, OFF or one song on repeat. The songs are read from Resources/Audio/Music when the
@@ -1189,7 +1194,7 @@ namespace ShiftRush.EditorTools
             // Toon Look: a switch (cloned from Gameplay's) right under Graphics Quality.
             var toon = Object.Instantiate(items["Enable Hints"].gameObject, vis).transform;
             ConfigureSwitch(toon, "Toon Look", GameSettings.ToonLookKey, true,
-                "Cel-shaded cars with a coloured rim, and ink outlines round everything. Off for the plain look, or if the game stutters.");
+                "Cel-shaded bikes and riders with a coloured rim, and ink outlines round everything. Off for the plain look, or if the game stutters.");
             toon.SetSiblingIndex(1);
             HideSectionHeaders(vis);
             // Applies window mode, frame rate, VSync, textures and filtering as they change (see DisplaySettings).
@@ -1345,7 +1350,7 @@ namespace ShiftRush.EditorTools
 
         // ------------------------------------------------------------------ panel list, credits, quit, splash
 
-        static void BuildPanelList(PanelManager pm, Animator home, Animator garage, Animator tracks, Animator settings)
+        static void BuildPanelList(PanelManager pm, Animator home, Animator garage, Animator tune, Animator tracks, Animator settings)
         {
             pm.panels.Clear();
             System.Action<string, Animator> add = (n, a) =>
@@ -1355,6 +1360,7 @@ namespace ShiftRush.EditorTools
             };
             add(MenuRouter.Home, home);
             add(MenuRouter.Garage, garage);
+            add(MenuRouter.Tune, tune);
             add(MenuRouter.Tracks, tracks);
             add(MenuRouter.Settings, settings);
             pm.currentPanelIndex = 0;
@@ -1374,7 +1380,7 @@ namespace ShiftRush.EditorTools
                 var img = logo.GetComponent<Image>();
                 if (img) img.enabled = false;
                 logo.enabled = false;
-                var mark = Txt(logo.transform, "SHIFT RUSH Wordmark", "SHIFT<color=#FF40D9>//</color>RUSH", fontTitle, 120, Color.white, TextAlignmentOptions.Center);
+                var mark = Txt(logo.transform, "BIKE RUSH Wordmark", "BIKE<color=#FF40D9>//</color>RUSH", fontTitle, 120, Color.white, TextAlignmentOptions.Center);
                 Stretch(mark.rectTransform);
                 mark.rectTransform.offsetMin = new Vector2(-400, 0);
                 mark.rectTransform.offsetMax = new Vector2(400, 0);
@@ -1389,7 +1395,7 @@ namespace ShiftRush.EditorTools
             var exit = canvas.Find("Modal Windows/Exit").GetComponent<ModalWindowManager>();
             foreach (var lo in exit.GetComponents<LocalizedObject>()) Object.DestroyImmediate(lo);
             exit.useLocalization = false;
-            exit.titleText = "LEAVE THE GARAGE?";
+            exit.titleText = "HANG UP THE HELMET?";
             exit.descriptionText = "Your settings are saved. Come back for another run.";
             EditorUtility.SetDirty(exit);
             return exit;
@@ -1400,7 +1406,7 @@ namespace ShiftRush.EditorTools
             var splash = canvas.Find("Splash Screen");
             var holder = splash.Find("Content/Logo Holder");
             foreach (Transform c in holder) c.gameObject.SetActive(false);
-            var t = Txt(holder, "SHIFT RUSH Title", "SHIFT<color=#FF40D9>//</color>RUSH", fontTitle, 170, Color.white, TextAlignmentOptions.Center);
+            var t = Txt(holder, "BIKE RUSH Title", "BIKE<color=#FF40D9>//</color>RUSH", fontTitle, 170, Color.white, TextAlignmentOptions.Center);
             Stretch(t.rectTransform);
             var le = holder.GetComponent<LayoutElement>() ?? holder.gameObject.AddComponent<LayoutElement>();
             le.preferredHeight = 200; le.preferredWidth = 1200;
@@ -1426,11 +1432,14 @@ namespace ShiftRush.EditorTools
             {
                 new EditorBuildSettingsScene(ScenePath, true),
             };
-            foreach (var t in new[] { "Track_AlpinePass", "Track_GlacierValley" })
-            {
-                string p = "Assets/_ShiftRush/Scenes/" + t + ".unity";
-                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(p) != null) list.Add(new EditorBuildSettingsScene(p, true));
-            }
+            // Every trail in the catalog (the menu can only load what's in the build).
+            var cat = AssetDatabase.LoadAssetAtPath<RaceCatalog>("Assets/_ShiftRush/Resources/RaceCatalog.asset");
+            if (cat != null)
+                foreach (var t in cat.tracks)
+                {
+                    string p = "Assets/_ShiftRush/Scenes/" + t.scene + ".unity";
+                    if (AssetDatabase.LoadAssetAtPath<SceneAsset>(p) != null) list.Add(new EditorBuildSettingsScene(p, true));
+                }
             EditorBuildSettings.scenes = list.ToArray();
         }
 

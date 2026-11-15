@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace ShiftRush.UI
 {
     /// <summary>
-    /// Garage: flick through the catalog's cars (Left/Right, A/D, bumpers, or the arrow buttons) with the car
+    /// Garage (the bike shed): flick through the catalog's bikes (Left/Right, A/D, bumpers, or the arrow buttons) with the car
     /// shown live on the showroom plinth, its name, tagline and four stat bars. Enter confirms.
     /// </summary>
     public class CarSelectPanel : MonoBehaviour
@@ -68,7 +68,7 @@ namespace ShiftRush.UI
             if (carName) carName.text = car.displayName.ToUpperInvariant();
             if (tagline) tagline.text = car.tagline;
             if (counter) counter.text = (index + 1).ToString("00") + " / " + cat.cars.Count.ToString("00");
-            int[] values = { car.topSpeed, car.acceleration, car.handling, car.boost };
+            int[] values = { car.topSpeed, car.acceleration, car.handling, car.air };
             for (int i = 0; i < stats.Length && i < values.Length; i++) if (stats[i]) stats[i].SetValue(values[i], car.accent);
             bool many = cat.cars.Count > 1;
             if (previousButton) previousButton.interactable = many;

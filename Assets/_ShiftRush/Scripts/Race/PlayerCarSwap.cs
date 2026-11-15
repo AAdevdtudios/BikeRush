@@ -34,6 +34,9 @@ namespace ShiftRush.Race
             {
                 v.Transform.name = choice.prefab.name;
                 SceneManager.MoveGameObjectToScene(v.Transform.gameObject, scene);
+                // Bikes: the chase camera was pointed at the bike that was there.
+                foreach (var cam in Object.FindObjectsByType<SBPScripts.BicycleCamera>(FindObjectsSortMode.None))
+                    if (cam.target == null || cam.target.root == placed.transform) cam.target = v.Transform;
             }
         }
     }

@@ -39,11 +39,11 @@ namespace ShiftRush.Core
         static readonly Tuning[] Levels =
         {
             new Tuning { pace = 0.9f, push = 0.04f, ease = 0.14f, carBoost = 1f, rivalNitro = 0f, gridSlot = 2, warpBest = 1, warpWorst = 2, shiftWindow = 1.3f, bonusNitro = 1.25f,
-                blurb = "Gentler rivals, a wider SHIFT window, more nitro. You start 3rd." },
+                blurb = "Gentler rivals, a wider landing window, more boost. You start 3rd." },
             new Tuning { pace = 1f, push = 0.06f, ease = 0.06f, carBoost = 1f, rivalNitro = 0f, gridSlot = 4, warpBest = 1, warpWorst = 3, shiftWindow = 1f, bonusNitro = 1f,
                 blurb = "The race as it's meant to be. You start 5th." },
             new Tuning { pace = 1.12f, push = 0.15f, ease = 0f, carBoost = 1.12f, rivalNitro = 0.025f, gridSlot = 5, warpBest = 2, warpWorst = 4, shiftWindow = 0.8f, bonusNitro = 0.8f,
-                blurb = "Faster rivals who never wait, a tight SHIFT window, a SHIFT lands you P2-P4. You start last." },
+                blurb = "Faster rivals who never wait, a tight landing window. You start last." },
         };
 
         /// <summary>The level the player picked.</summary>

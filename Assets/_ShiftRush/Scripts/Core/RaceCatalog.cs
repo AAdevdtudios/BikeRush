@@ -25,6 +25,8 @@ namespace ShiftRush.Core
             [Range(0, 10)] public int acceleration = 6;
             [Range(0, 10)] public int handling = 6;
             [Range(0, 10)] public int boost = 6;
+            [Tooltip("Bikes: how it flies off kickers and crests (the fourth bar in the garage).")]
+            [Range(0, 10)] public int air = 6;
             [Tooltip("A picture of the car for the track select screen. Rendered by the menu builder.")]
             public Sprite thumbnail;
             [Tooltip("Paint colour used for the card accent.")]

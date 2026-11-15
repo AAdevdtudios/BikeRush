@@ -392,7 +392,7 @@ namespace ShiftRush.Race
             bool again = (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) || (pad != null && pad.buttonSouth.wasPressedThisFrame);
             bool menu = (kb != null && kb.mKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame);
             if (again) RaceAgain();
-            else if (menu) SceneLoader.Load(MenuScene, "MAIN MENU", "SHIFT//RUSH", "");
+            else if (menu) SceneLoader.Load(MenuScene, "MAIN MENU", "BIKE//RUSH", "");
         }
 
         static void RaceAgain()

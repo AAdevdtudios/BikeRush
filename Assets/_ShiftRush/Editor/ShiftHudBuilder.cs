@@ -118,7 +118,7 @@ namespace ShiftRush.EditorTools
             var rwFrame = Img(rw, "Frame", slantFrame, Magenta);
             rwFrame.type = Image.Type.Sliced;
             Place(rwFrame.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -190), new Vector2(760, 170));
-            var rwHead = Txt(rw, "Headline", "+100% NITRO", fontTitle, 64, Color.white, TextAlignmentOptions.Center);
+            var rwHead = Txt(rw, "Headline", "+100% BOOST", fontTitle, 64, Color.white, TextAlignmentOptions.Center);
             Place(rwHead.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -150), new Vector2(740, 76));
             var rwDetail = Txt(rw, "Detail", "", fontBold, 20, Steel, TextAlignmentOptions.Center);
             rwDetail.characterSpacing = 8;

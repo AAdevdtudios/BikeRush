@@ -118,6 +118,7 @@ namespace ShiftRush.EditorTools
             Scenery(line, terrain, course.transform);
             Arrows(line, terrain, course.transform);
             Markers(line, terrain, course.transform);
+            BoostPads(line, course.transform);
             StartArch(line, course.transform);
             var raceLine = MakeRaceLine(line, spec, course.transform);
 
@@ -706,7 +707,8 @@ namespace ShiftRush.EditorTools
                 {
                     name = RivalNames[i], livery = frame, livery2 = jersey, color = RivalColors[i],
                     // Cruise = 78% of this: about 30-36 km/h against the player's 32, so boost decides it.
-                    grip = 1.1f + i * 0.05f, topSpeedKmh = 38f + i * 2f, shortcutChance = 0.5f,
+                    // Cruise = 78% of this: about 53-65 km/h against the player's 58, so boost and pads decide it.
+                    grip = 1.1f + i * 0.05f, topSpeedKmh = 68f + i * 3f, shortcutChance = 0.5f,
                 });
             }
             f.firstRowBack = 5f; f.rowSpacing = 5f; f.laneSpacing = 2.2f;
@@ -750,6 +752,7 @@ namespace ShiftRush.EditorTools
             var line = new Line { points = rl.points, distances = rl.distances, length = rl.length };
             Arrows(line, terrain, rl.transform.parent);
             Markers(line, terrain, rl.transform.parent);
+            BoostPads(line, rl.transform.parent);
             TrailMaterial();
             EditorSceneManager.MarkSceneDirty(rl.gameObject.scene);
             EditorSceneManager.SaveScene(rl.gameObject.scene);
@@ -852,6 +855,103 @@ namespace ShiftRush.EditorTools
                 }
             }
             Debug.Log("[BIKE//RUSH] " + count + " marker posts.");
+        }
+
+        /// <summary>
+        /// Boost pads on the straights, away from bends, kickers and the start, about every 170 m. They step
+        /// across the trail (left, middle, right) so each one is a choice of line.
+        /// </summary>
+        static void BoostPads(Line line, Transform parent)
+        {
+            var old = parent.Find("Boost Pads");
+            if (old != null) Object.DestroyImmediate(old.gameObject);
+            var root = new GameObject("Boost Pads").transform; root.SetParent(parent, false);
+            var mat = BoostPadMaterial();
+            var rail = SimpleMat("M_BoostRail", new Color(0.1f, 0.85f, 1f), new Color(0.1f, 0.85f, 1f) * 2.5f, 0.6f);
+
+            var avoid = new List<Vector3>();
+            foreach (var t in parent.GetComponentsInChildren<Transform>())
+                if (t.name.StartsWith("Kicker")) avoid.Add(t.position);
+
+            int n = line.points.Length; const int span = 8; // ±16 m
+            float[] lanes = { -2.2f, 0f, 2.2f };
+            float last = -1000f; int count = 0;
+            for (int i = 0; i < n; i++)
+            {
+                float d = line.distances[i];
+                if (d < 60f || d > line.length - 40f || d - last < 170f) continue;
+                float turn = Vector3.Angle(line.FlatDir((i - span + n) % n), line.FlatDir((i + span) % n));
+                if (turn > 8f) continue;
+                Vector3 c = line.points[i];
+                bool clear = true;
+                foreach (var a in avoid) if (Flat(a - c).sqrMagnitude < 35f * 35f) clear = false;
+                if (!clear) continue;
+
+                float lat = lanes[count % lanes.Length];
+                Vector3 f = line.FlatDir(i), r = line.Right(i);
+                Vector3 pos = c + r * lat;
+                Vector3 nrm = Vector3.up;
+                if (Physics.Raycast(pos + Vector3.up * 5f, Vector3.down, out var hit, 15f, ~0, QueryTriggerInteraction.Ignore)) { pos = hit.point; nrm = hit.normal; }
+                Vector3 along = Vector3.ProjectOnPlane(f, nrm).normalized;
+
+                var g = new GameObject("Boost Pad " + (count + 1), typeof(BoxCollider), typeof(BoostPad));
+                g.layer = 2; // Ignore Raycast: the pack's ground check must not stand on the trigger
+                g.transform.SetParent(root, false);
+                g.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(along, nrm));
+                var box = g.GetComponent<BoxCollider>();
+                box.isTrigger = true; box.center = new Vector3(0f, 0.9f, 0f); box.size = new Vector3(2.6f, 1.8f, 6f);
+                var pad = g.GetComponent<BoostPad>();
+                pad.distance = d; pad.lateral = lat;
+
+                var strip = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                strip.name = "Strip"; strip.transform.SetParent(g.transform, false);
+                strip.transform.SetPositionAndRotation(pos + nrm * 0.07f, Quaternion.LookRotation(-nrm, along));
+                strip.transform.localScale = new Vector3(2.2f, 6f, 1f);
+                strip.GetComponent<MeshRenderer>().sharedMaterial = mat;
+                strip.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                Object.DestroyImmediate(strip.GetComponent<Collider>());
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    var rl = Cube(g.transform, "Rail", pos + nrm * 0.06f + Vector3.Cross(nrm, along) * side * 1.18f, new Vector3(0.12f, 0.08f, 6.2f), along, rail);
+                    Object.DestroyImmediate(rl.GetComponent<Collider>());
+                }
+                last = d; count++;
+            }
+            Debug.Log("[BIKE//RUSH] " + count + " boost pads.");
+        }
+
+        static Material BoostPadMaterial()
+        {
+            const string texPath = ArtDir + "T_BoostPad.png";
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(texPath) == null)
+            {
+                const int w = 128, h = 128;
+                var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                var bg = new Color(0.06f, 0.04f, 0.1f); var hot = new Color(1f, 0.22f, 0.82f); var cool = new Color(0.15f, 0.9f, 1f);
+                for (int y = 0; y < h; y++)
+                    for (int x = 0; x < w; x++)
+                    {
+                        float xc = Mathf.Abs(x - w * 0.5f + 0.5f);
+                        // One fat chevron pointing up the texture (= forward along the pad), cyan edge on magenta.
+                        float v = y - 30f - (w * 0.5f - xc) * 0.75f;
+                        Color c = bg;
+                        if (xc < 56f && v >= -36f && v < 0f) c = v > -7f ? cool : hot;
+                        tex.SetPixel(x, y, c);
+                    }
+                tex.Apply();
+                System.IO.File.WriteAllBytes(texPath, tex.EncodeToPNG());
+                Object.DestroyImmediate(tex);
+                AssetDatabase.ImportAsset(texPath);
+                var imp = (TextureImporter)AssetImporter.GetAtPath(texPath);
+                imp.wrapMode = TextureWrapMode.Repeat; imp.mipmapEnabled = true; imp.SaveAndReimport();
+            }
+            var t = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            var m = SimpleMat("M_BoostPad", Color.white, Color.white * 2.2f, 0.7f);
+            m.SetTexture("_BaseMap", t);
+            m.SetTexture("_EmissionMap", t);
+            m.SetTextureScale("_BaseMap", new Vector2(1f, 3f));
+            EditorUtility.SetDirty(m);
+            return m;
         }
 
         static void Board(Transform parent, string name, Vector3 foot, Vector3 face, Material chevrons, Material post)

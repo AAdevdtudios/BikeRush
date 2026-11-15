@@ -373,14 +373,14 @@ namespace ShiftRush.Race
                     if (GameSettings.AutoAccelerate)
                     {
                         key = "AUTO";
-                        head = "THE THROTTLE'S ON YOU";
-                        body = M + left + " " + right + E + " steer  //  " + M + brake + E + " brakes  //  " + M + hand + E + " handbrake to drift";
+                        head = "YOUR RIDER PEDALS FOR YOU";
+                        body = M + left + " " + right + E + " pick your line  //  " + M + brake + E + " brakes  //  " + M + hand + E + " hold, let go to hop";
                     }
                     else
                     {
                         key = Key("Throttle", "wasd", "positive", "W");
-                        head = "HOLD " + key + " TO DRIVE";
-                        body = M + left + " " + right + E + " steer  //  " + M + brake + E + " brakes, then reverses  //  " + M + hand + E + " handbrake to drift";
+                        head = "HOLD " + key + " TO PEDAL";
+                        body = M + left + " " + right + E + " pick your line, the trail steers  //  " + M + brake + E + " brakes  //  " + M + hand + E + " hold, let go to hop";
                     }
                     return;
                 case Lesson.Ramp:
@@ -396,31 +396,31 @@ namespace ShiftRush.Race
                 case Lesson.Missed:
                     key = "AGAIN";
                     head = "MISSED. NEXT RAMP, GO AGAIN";
-                    body = "A miss still pays some nitro. Watch the magenta diamond and press as it touches the white one.";
+                    body = "A miss still pays some boost. Watch the magenta diamond and press as it touches the white one.";
                     return;
                 case Lesson.World:
                     if (arena != null && arena.kind == ShiftArena.Kind.TrapRun)
                     {
                         key = "DODGE";
                         head = "REACH THE ARCH. DODGE THE TRAPS.";
-                        body = "Every hit costs nitro. Make it in time and you come back in the " + M + "top three" + E + ".";
+                        body = "Every hit costs boost. Make it in time and you come back in the " + M + "top three" + E + ".";
                     }
                     else
                     {
                         key = "RINGS";
-                        head = "DRIVE THROUGH THE RINGS";
-                        body = "More rings, more nitro. Reach the arch in time and you come back in the " + M + "top three" + E + ".";
+                        head = "RIDE THROUGH THE RINGS";
+                        body = "More rings, more boost. Reach the arch in time and you come back in the " + M + "top three" + E + ".";
                     }
                     return;
                 case Lesson.Nitro:
                     key = nitro;
-                    head = "NITRO'S LOADED: HOLD " + nitro;
-                    body = "Nitro only comes from SHIFT ramps, so spend it on the straights.";
+                    head = "BOOST'S READY: HOLD " + nitro;
+                    body = "It refills as you ride, faster with tricks and boost pads. Spend it on the straights.";
                     return;
                 case Lesson.Stuck:
                     key = "R";
                     head = "STUCK? PRESS R";
-                    body = "Puts you back on the racing line, facing the right way.";
+                    body = "Puts you back on the trail, facing the right way.";
                     return;
                 case Lesson.Done:
                     key = "GO";

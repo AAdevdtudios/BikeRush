@@ -20,7 +20,7 @@ MonoBehaviour:
   - headerTitle: Razorbill Studio
     headerTitleKey: 
     items:
-    - Design, code and level design
+    - Design, code and trail building
   - headerTitle: Concept & Inspiration
     headerTitleKey: 
     items:
@@ -37,13 +37,10 @@ MonoBehaviour:
   - headerTitle: Third-party packs
     headerTitleKey: 
     items:
-    - Realistic Car Controller Pro (BoneCracker Games)
-    - 'ARCADE: Ultimate Vehicles Pack'
-    - Spline Architect
-    - POLYGON Alpine Mountain (Synty)
-    - 'KROMA: Atmosphere Toolkit (FayLabs)'
-    - MicroVerse (Jason Booth)
+    - Simple Bicycle Physics
+    - POLYGON Nature Biomes (Synty)
     - 'Heat: Complete Modern UI (Michsky)'
+    - UI Soft Mask (AMS)
     - UI SFX Mega Pack
   - headerTitle: Music
     headerTitleKey: 
@@ -59,7 +56,7 @@ MonoBehaviour:
   mentions:
   - ID: thanks
     icon: {fileID: 0}
-    description: Thanks for playing SHIFT//RUSH.
+    description: Thanks for riding BIKE//RUSH.
     descriptionKey: 
     descriptionSpacing: 30
     layoutSpacing: 160

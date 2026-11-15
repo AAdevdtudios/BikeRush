@@ -9,7 +9,7 @@ namespace ShiftRush.Race
     /// Drives a rival round the race line. Steering chases a point a speed-dependent distance ahead (offset into
     /// the rival's lane); speed comes from the line's corner limits, scaled by the rival's grip, so they brake
     /// for bends the way a driver would. They pull out to pass cars in front, sometimes take shortcuts, earn
-    /// nitro when they jump a SHIFT ramp and fire it on straights. A rival that gets stuck is put back on the line.
+    /// nitro when they jump a SHIFT ramp and fire it on straights, and line up for boost pads. A rival that gets stuck is put back on the line.
     /// </summary>
     [DefaultExecutionOrder(50)]
     public class RivalDriver : MonoBehaviour
@@ -70,6 +70,7 @@ namespace ShiftRush.Race
             float vLimit = profile.topSpeedKmh / 3.6f;
             wantLane = float.NaN;
             ChooseShortcut(p, d, speed, ref vLimit, sqrtGrip);
+            if (float.IsNaN(wantLane)) LineUpForPad(d);
             if (onShortcut != null)
             {
                 int si; float along;
@@ -161,6 +162,23 @@ namespace ShiftRush.Race
                 }
             }
             return laneTarget;
+        }
+
+        BoostPad decidedPad;
+        bool padTake;
+
+        /// <summary>Boost pads: most of the time, move across in good time to ride over the next one.</summary>
+        void LineUpForPad(float d)
+        {
+            BoostPad next = null; float best = 75f;
+            foreach (var pad in BoostPad.All)
+            {
+                float ahead = Mathf.Repeat(pad.distance - d, line.length);
+                if (ahead > 6f && ahead < best) { best = ahead; next = pad; }
+            }
+            if (next == null) return;
+            if (decidedPad != next) { decidedPad = next; padTake = Random.value < 0.8f; }
+            if (padTake) wantLane = next.lateral;
         }
 
         void ChooseShortcut(Vector3 p, float d, float speed, ref float vLimit, float sqrtGrip)

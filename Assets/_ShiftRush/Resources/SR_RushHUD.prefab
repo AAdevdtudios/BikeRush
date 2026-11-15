@@ -612,18 +612,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aaebb06bd0c804e6481cbd08f65a8c01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShiftRush.Stunts.StuntDirector
-  minAirTime: 0.45
-  spinSlack: 30
-  flipSlack: 70
-  perHalfSpin: 0.07
-  perFlip: 0.2
-  comboBonus: 0.06
-  perAirSecond: 0.05
-  repeatFactor: 0.5
-  perfectWindow: 0.16
-  tiltLimits: {x: 28, y: 55}
-  headingLimits: {x: 40, y: 100}
+  minAirTime: 0.2
+  landMargin: 0.3
+  promptSeconds: 0.9
+  slowMotion: 0.25
+  startScale: 3
+  endScale: 0.4
+  window: 0.22
+  perfectBand: 0.08
+  levelFollow: 8
+  chainStep: 0.25
+  perfectMult: 1.5
   perfectKick: 4
+  repeatFactor: 0.5
+  bailTilt: 60
   bailSeconds: 1.6
   landGroup: {fileID: 1213201950839004762}
   targetDiamond: {fileID: 5331624143982358608}
@@ -1209,7 +1211,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: +6% NITRO
+  m_text: +6% BOOST
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e66011e4b0dfee745b0bdcceedc236fd, type: 2}
   m_sharedMaterial: {fileID: -6863981358275783805, guid: e66011e4b0dfee745b0bdcceedc236fd, type: 2}
