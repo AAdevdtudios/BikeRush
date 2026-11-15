@@ -287,7 +287,7 @@ namespace ShiftRush.EditorTools
             return SaveMesh(mesh, key + "_Trail");
         }
 
-        static Material TrailMaterial()
+        internal static Material TrailMaterial()
         {
             string path = ArtDir + "M_Trail.mat";
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -338,7 +338,7 @@ namespace ShiftRush.EditorTools
 
         // A curved wedge: flat run-in steepening to the lip (y = h·(s/L)^1.6), sides and a back face.
         // Submesh 0 the deck, submesh 1 a painted stripe along the lip.
-        static Mesh KickerMesh(float width, float length, float height, string name)
+        internal static Mesh KickerMesh(float width, float length, float height, string name)
         {
             const int seg = 12;
             var v = new List<Vector3>(); var uv = new List<Vector2>();
@@ -634,7 +634,7 @@ namespace ShiftRush.EditorTools
             Object.DestroyImmediate(lineStripe.GetComponent<BoxCollider>());
         }
 
-        static GameObject Cube(Transform parent, string name, Vector3 pos, Vector3 size, Vector3 fwd, Material m)
+        internal static GameObject Cube(Transform parent, string name, Vector3 pos, Vector3 size, Vector3 fwd, Material m)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
@@ -669,7 +669,7 @@ namespace ShiftRush.EditorTools
         // ------------------------------------------------------------------ bikes
 
         /// <summary>The race bike: the pack's MTB with our adapter and reset. Player and rivals both use it.</summary>
-        static GameObject MakeBikePrefab()
+        internal static GameObject MakeBikePrefab()
         {
             var src = AssetDatabase.LoadAssetAtPath<GameObject>(BikeSource);
             if (src == null) { Debug.LogError("[BIKE//RUSH] Simple Bicycle Physics isn't imported: " + BikeSource); return null; }
@@ -1012,7 +1012,7 @@ namespace ShiftRush.EditorTools
 
         // ------------------------------------------------------------------ helpers
 
-        static Material SimpleMat(string name, Color color, Color emission, float smooth)
+        internal static Material SimpleMat(string name, Color color, Color emission, float smooth)
         {
             string path = ArtDir + name + ".mat";
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -1024,7 +1024,7 @@ namespace ShiftRush.EditorTools
             return m;
         }
 
-        static Mesh SaveMesh(Mesh mesh, string name)
+        internal static Mesh SaveMesh(Mesh mesh, string name)
         {
             string path = ArtDir + name + ".asset";
             AssetDatabase.DeleteAsset(path);
@@ -1032,7 +1032,7 @@ namespace ShiftRush.EditorTools
             return mesh;
         }
 
-        static void EnsureFolder(string path)
+        internal static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;
             int slash = path.LastIndexOf('/');
@@ -1040,7 +1040,7 @@ namespace ShiftRush.EditorTools
             AssetDatabase.CreateFolder(path.Substring(0, slash), path.Substring(slash + 1));
         }
 
-        static void AddToBuild(string scene)
+        internal static void AddToBuild(string scene)
         {
             var list = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             foreach (var s in list) if (s.path == scene) return;

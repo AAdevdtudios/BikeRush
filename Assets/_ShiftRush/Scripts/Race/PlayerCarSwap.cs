@@ -15,7 +15,7 @@ namespace ShiftRush.Race
         /// <summary>Called by <see cref="RaceHUD"/> as it sets up a scene, before anything looks for the player's car.</summary>
         public static void Apply(Scene scene)
         {
-            if (Object.FindFirstObjectByType<RaceLine>() == null) return;
+            if (Object.FindFirstObjectByType<RaceLine>() == null && Object.FindFirstObjectByType<AirShow.AirShowRun>() == null) return;
             var choice = RaceSession.Car;
             var cat = RaceCatalog.Instance;
             if (choice == null || choice.prefab == null || cat == null) return;

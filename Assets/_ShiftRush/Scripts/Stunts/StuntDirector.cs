@@ -82,6 +82,8 @@ namespace ShiftRush.Stunts
 
         /// <summary>A landing: the chain's name ("" for none), the grade and the boost paid.</summary>
         public static event System.Action<string, string, float> Landed;
+        /// <summary>When set, a prompt only opens while this says yes (Air Show: inside a trick box).</summary>
+        public static System.Func<bool> PromptGate;
 
         enum State { Ground, Free, Prompt, Trick }
 
@@ -151,7 +153,7 @@ namespace ShiftRush.Stunts
             switch (state)
             {
                 case State.Free:
-                    if (!chainOver && airTime >= minAirTime && Time.time >= nextPromptAt
+                    if (!chainOver && airTime >= minAirTime && Time.time >= nextPromptAt && (PromptGate == null || PromptGate())
                         && Pick(TimeToImpact() - PromptGameSeconds() - landMargin, false).HasValue)
                         StartPrompt();
                     break;

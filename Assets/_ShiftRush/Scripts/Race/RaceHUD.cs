@@ -124,7 +124,7 @@ namespace ShiftRush.Race
                 if (mb is IVehicle v) { vehicle = v; dash = mb as IVehicleDash; break; }
 
             if (raceGroup != null) raceGroup.alpha = race != null ? 1f : 0f;
-            if (freeRoamTag != null) freeRoamTag.SetActive(race == null);
+            if (freeRoamTag != null) freeRoamTag.SetActive(race == null && FindFirstObjectByType<AirShow.AirShowRun>() == null);
             if (finishGroup != null) { finishGroup.alpha = 0f; finishGroup.blocksRaycasts = false; }
             if (messageGroup != null) messageGroup.alpha = 0f;
             if (countdownText != null) countdownText.text = "";

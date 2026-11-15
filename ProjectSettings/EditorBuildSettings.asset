@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/Course_RidgeLine.unity
     guid: 0ce3bfabb37384725b1922e83460f4f5
+  - enabled: 1
+    path: Assets/_ShiftRush/Scenes/Show_Cloudbreak.unity
+    guid: 04f6cb04e9bf34adf944a9b6a75d80c3
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

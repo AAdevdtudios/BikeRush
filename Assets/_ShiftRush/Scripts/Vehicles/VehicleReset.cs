@@ -22,6 +22,9 @@ namespace ShiftRush.Vehicles
         [Tooltip("Metres past the edge of the drivable surface that count as off the circuit.")]
         [SerializeField] float offTrackMargin = 6f;
 
+        /// <summary>Below this the car has fallen off the world. Venues that go deep (Air Show) lower it.</summary>
+        public float KillHeight { get { return killHeight; } set { killHeight = value; } }
+
         /// <summary>False on rivals: the R key is the player's.</summary>
         [HideInInspector] public bool listenForInput = true;
 

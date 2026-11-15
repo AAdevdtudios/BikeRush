@@ -93,6 +93,14 @@ namespace ShiftRush.UI
             RaceSession.Mode = (RideMode)selected;
             PlayerPrefs.Save();
             MenuSounds.Select();
+            if (RaceSession.Mode == RideMode.AirShow)
+            {
+                // Its own side-on venue, no trail to pick.
+                var car = RaceSession.Car;
+                SceneLoader.Load(RideModes.AirShowScene, RideModes.AirShowVenue,
+                    (car != null ? car.displayName.ToUpperInvariant() + "  //  " : "") + "AIR SHOW", RideModes.AirShowTip());
+                return;
+            }
             onConfirm.Invoke();
         }
 
