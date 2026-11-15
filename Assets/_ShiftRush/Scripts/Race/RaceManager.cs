@@ -57,6 +57,8 @@ namespace ShiftRush.Race
         public Racer Player { get; private set; }
         public readonly List<Racer> Racers = new List<Racer>();
         public float BestLap { get; private set; }
+        /// <summary>A Ghost Run: no rivals, just the player, the clock and their best run.</summary>
+        public bool Solo { get; private set; }
 
         public event System.Action<int> CountdownTick;      // 3,2,1,0(GO)
         public event System.Action<Racer, float, bool> LapCompleted; // racer, lap time, new best
@@ -96,7 +98,9 @@ namespace ShiftRush.Race
                     }
                     break;
                 }
-            RaceGrid.Fill(this, Player); // grid slots and the rivals
+            Solo = Core.RaceSession.Mode == Core.RideMode.GhostRun;
+            RaceGrid.Fill(this, Player, Solo); // grid slots and the rivals (none in a Ghost Run)
+            if (Solo) GhostRun.Attach(this);
             CurrentState = State.Countdown;
             countdownStart = Time.time;
             CountdownNumber = -1;
@@ -251,8 +255,6 @@ namespace ShiftRush.Race
             if (r.finished || r.suspended) return;
             Vector3 p = r.vehicle.Transform.position;
             r.nearest = Line.Nearest(p, r.nearest);
-            float d = Line.distances[r.nearest];
-            r.progress = r.started ? d : d - Line.length; // still behind the line: negative
 
             // Wrong way: moving against the line's direction at speed.
             var vel = r.vehicle.Body != null ? r.vehicle.Body.linearVelocity : Vector3.zero;
@@ -274,6 +276,19 @@ namespace ShiftRush.Race
                 if (g != r.nextGate) continue;
                 Crossed(r, g);
             }
+
+            // After the gates, so a lap counted this frame is already in the lap number.
+            float d = Line.distances[r.nearest];
+            if (r.started)
+            {
+                // Around the start/finish line the nearest point and the lap count don't flip on the same frame
+                // (and a wide line can miss the gate): keep the distance running on so a racer never looks a whole
+                // lap behind (or ahead). Last checkpoint passed but not the line yet: the start of the line is
+                // still the end of this lap. Just over the line: the end of the line is the start of this one.
+                if (r.nextGate == 0 && d < Line.length * 0.5f) d += Line.length;
+                else if (r.nextGate == 1 && d > Line.length * 0.5f) d -= Line.length;
+            }
+            r.progress = r.started ? d : d - Line.length; // still behind the line: negative
         }
 
         void Crossed(Racer r, int g)

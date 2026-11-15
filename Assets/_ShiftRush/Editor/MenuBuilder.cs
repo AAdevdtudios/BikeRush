@@ -83,10 +83,11 @@ namespace ShiftRush.EditorTools
             var panels = canvas.Find("Main Content").GetComponent<PanelManager>();
             var home = BuildHome(canvas, router, showroom);
             var tune = BuildTune(canvas, router, showroom);
+            var modes = BuildModes(canvas, router, showroom);
             var garage = BuildGarage(canvas, router, showroom);
             var tracks = BuildTracks(canvas, router, showroom);
             BuildSettings(canvas, router);
-            BuildPanelList(panels, home, garage, tune, tracks, canvas.Find("Main Content/Settings").GetComponent<Animator>());
+            BuildPanelList(panels, home, garage, tune, modes, tracks, canvas.Find("Main Content/Settings").GetComponent<Animator>());
             var creditsManager = BuildCredits(canvas, credits);
             var quit = BuildQuitWindow(canvas, router);
             BuildSplash(canvas);
@@ -94,6 +95,7 @@ namespace ShiftRush.EditorTools
             Hint(home.transform.Find("Content"), "<color=#FF40D9>W S</color>  SHIFT GEAR     <color=#FF40D9>1 2 3 R</color>  JUMP TO     <color=#FF40D9>ENTER</color>  ENGAGE");
             Hint(garage.transform.Find("Content"), "<color=#FF40D9>A D</color>  CHANGE BIKE     <color=#FF40D9>ENTER</color>  TUNE IT");
             Hint(tune.transform.Find("Content"), "<color=#FF40D9>W S</color>  PICK     <color=#FF40D9>A D</color>  ADJUST     <color=#FF40D9>R</color>  STOCK     <color=#FF40D9>ENTER</color>  RIDE ON");
+            Hint(modes.transform.Find("Content"), "<color=#FF40D9>A D</color>  PICK A RIDE     <color=#FF40D9>1 2 3</color>  JUMP TO     <color=#FF40D9>ENTER</color>  LOCK IN");
             Hint(tracks.transform.Find("Content"), "<color=#FF40D9>A D</color>  CHANGE TRAIL     <color=#FF40D9>W S</color>  DIFFICULTY     <color=#FF40D9>ENTER</color>  RACE");
 
             var so = new SerializedObject(router);
@@ -735,7 +737,7 @@ namespace ShiftRush.EditorTools
         {
             var panel = RepurposePanel(canvas, "Shop", MenuRouter.Garage);
             var content = panel.Find("Content");
-            Header(content, "BIKE SHED", "STEP 1 / 3   CHOOSE YOUR BIKE");
+            Header(content, "BIKE SHED", "STEP 1 / 4   CHOOSE YOUR BIKE");
 
             var nameText = Txt(content, "Bike Name", "SWITCHBACK", fontTitle, 128, Color.white, TextAlignmentOptions.Left);
             Place(nameText.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 0), new Vector2(120, 210), new Vector2(900, 150));
@@ -806,7 +808,7 @@ namespace ShiftRush.EditorTools
         {
             var panel = RepurposePanel(canvas, "Extras", MenuRouter.Tracks);
             var content = panel.Find("Content");
-            Header(content, "TRAILS", "STEP 3 / 3   CHOOSE A TRAIL");
+            Header(content, "TRAILS", "STEP 4 / 4   CHOOSE A TRAIL");
 
             // Selected track's hero shot, soft-masked into a wide slanted band. It lives on its own canvas placed in
             // the showroom camera's space, far behind the car, so the live car sits in front of the track photo.
@@ -1350,7 +1352,7 @@ namespace ShiftRush.EditorTools
 
         // ------------------------------------------------------------------ panel list, credits, quit, splash
 
-        static void BuildPanelList(PanelManager pm, Animator home, Animator garage, Animator tune, Animator tracks, Animator settings)
+        static void BuildPanelList(PanelManager pm, Animator home, Animator garage, Animator tune, Animator modes, Animator tracks, Animator settings)
         {
             pm.panels.Clear();
             System.Action<string, Animator> add = (n, a) =>
@@ -1361,6 +1363,7 @@ namespace ShiftRush.EditorTools
             add(MenuRouter.Home, home);
             add(MenuRouter.Garage, garage);
             add(MenuRouter.Tune, tune);
+            add(MenuRouter.Modes, modes);
             add(MenuRouter.Tracks, tracks);
             add(MenuRouter.Settings, settings);
             pm.currentPanelIndex = 0;

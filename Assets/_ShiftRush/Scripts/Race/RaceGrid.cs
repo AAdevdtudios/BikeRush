@@ -27,7 +27,7 @@ namespace ShiftRush.Race
             return pos + Vector3.up * 0.6f;
         }
 
-        public static void Fill(RaceManager race, RaceManager.Racer player)
+        public static void Fill(RaceManager race, RaceManager.Racer player, bool solo = false)
         {
             var f = RivalField.Load();
             var line = race.Line;
@@ -35,7 +35,7 @@ namespace ShiftRush.Race
 
             var level = Difficulty.Current;
             int total = f.rivals.Count + 1;
-            int playerSlot = Mathf.Clamp(level.gridSlot, 0, total - 1);
+            int playerSlot = solo ? 0 : Mathf.Clamp(level.gridSlot, 0, total - 1); // alone: front of the grid
             var raceField = Object.Instantiate(f); // this race's copy: the asset stays as authored
             raceField.pushFromBehind = level.push;
             raceField.easeOutFront = level.ease;
@@ -46,7 +46,7 @@ namespace ShiftRush.Race
                 var pp = Slot(line, f, playerSlot, out pr, out pl);
                 player.vehicle.Teleport(pp, pr, 0f);
             }
-            if (f.carPrefab == null) return;
+            if (solo || f.carPrefab == null) return;
 
             int slot = 0;
             foreach (var rival in f.rivals)

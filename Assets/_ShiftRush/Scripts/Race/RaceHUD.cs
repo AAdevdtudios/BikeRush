@@ -78,8 +78,13 @@ namespace ShiftRush.Race
         [SerializeField] Color accent = new Color32(255, 64, 217, 255);
         [SerializeField] Color steel = new Color32(154, 160, 180, 255);
 
+        static readonly Color GhostCyan = new Color32(64, 224, 255, 255);
+        const string GhostHex = "#40E0FF", BehindHex = "#FF5A6E";
+
         RaceManager race;
         IVehicle vehicle;
+        TMP_Text posLabel;
+        RectTransform ghostDot;
         IVehicleDash dash;
         float shownSpeed, countdownPunch, tickTime, messageUntil, finishShownAt = -1f;
         int lastCount = -1;
@@ -127,6 +132,21 @@ namespace ShiftRush.Race
             if (mapImage != null && line != null && line.mapSprite != null) mapImage.sprite = line.mapSprite;
             hasMap = line != null && line.mapSprite != null;
             if (mapView != null) mapView.gameObject.SetActive(hasMap);
+            if (positionValue != null) posLabel = Child(positionValue.transform.parent, "Label");
+        }
+
+        bool Ghosting { get { return race != null && race.Solo; } }
+
+        static TMP_Text Child(Transform parent, string name)
+        {
+            var t = parent != null ? parent.Find(name) : null;
+            return t != null ? t.GetComponent<TMP_Text>() : null;
+        }
+
+        /// <summary>"-1.24" ahead of the ghost in cyan, "+0.80" behind in red.</summary>
+        static string Gap(float d)
+        {
+            return d <= 0f ? "<color=" + GhostHex + ">-" + (-d).ToString("0.00") + "</color>" : "<color=" + BehindHex + ">+" + d.ToString("0.00") + "</color>";
         }
 
         void OnEnable()
@@ -158,6 +178,12 @@ namespace ShiftRush.Race
                 countdownText.color = n > 0 ? Color.white : accent;
             }
             Play(n > 0 ? beep : go, n > 0 ? 0.8f : 1f);
+            if (n == 0 && Ghosting)
+            {
+                var g = GhostRun.Current;
+                if (g != null && g.HasGhost) Show("CHASE YOUR GHOST  " + RaceManager.FormatTime(g.BestTotal), 2.6f);
+                else Show("SET A TIME  //  YOUR GHOST RIDES NEXT RUN", 3f);
+            }
         }
 
         void OnLap(RaceManager.Racer r, float time, bool best)
@@ -182,7 +208,8 @@ namespace ShiftRush.Race
             if (finishPosition != null) finishPosition.text = Ordinal(race.PositionOf(r)) + "<size=50%><color=#9AA0B4>  /  " + race.Racers.Count + "</color></size>";
             if (finishTotal != null) finishTotal.text = RaceManager.FormatTime(r.finishTime);
             if (finishBest != null) finishBest.text = RaceManager.FormatTime(race.BestLap);
-            if (finishLaps != null)
+            if (Ghosting) GhostResults(r);
+            else if (finishLaps != null)
             {
                 float fastest = float.MaxValue;
                 foreach (var t in r.lapTimes) fastest = Mathf.Min(fastest, t);
@@ -195,6 +222,44 @@ namespace ShiftRush.Race
                     sb.Append(f ? "<color=#FF40D9>" + RaceManager.FormatTime(r.lapTimes[i]) + "</color>" : RaceManager.FormatTime(r.lapTimes[i]));
                     if (i < r.lapTimes.Count - 1) sb.Append('\n');
                 }
+                finishLaps.text = sb.ToString();
+            }
+        }
+
+        void GhostResults(RaceManager.Racer r)
+        {
+            var g = GhostRun.Current;
+            if (g != null) g.Finish(r);
+            var fin = finishPosition != null ? finishPosition.transform.parent : null;
+            var title = Child(fin, "Title");
+            if (title != null) title.text = "RUN COMPLETE";
+            var posL = Child(fin, "Position Label");
+            var bestL = Child(fin, "Best Label");
+            if (bestL != null) bestL.text = "BEST RUN";
+            bool first = g == null || g.PreviousBest <= 0f;
+            if (posL != null) posL.text = first ? "FIRST RUN" : "VS GHOST";
+            if (finishPosition != null)
+            {
+                finishPosition.textWrappingMode = TextWrappingModes.NoWrap;
+                if (first) finishPosition.text = "<color=" + GhostHex + "><size=62%>GHOST SET</size></color>";
+                else if (g.NewBest) finishPosition.text = "<color=" + GhostHex + ">-" + (g.PreviousBest - r.finishTime).ToString("0.000") + "</color><size=40%>  NEW BEST</size>";
+                else finishPosition.text = "<color=" + BehindHex + ">+" + (r.finishTime - g.PreviousBest).ToString("0.000") + "</color>";
+            }
+            if (finishBest != null) { finishBest.text = RaceManager.FormatTime(g != null ? g.BestTotal : r.finishTime); finishBest.color = GhostCyan; }
+            if (finishLaps != null)
+            {
+                float fastest = float.MaxValue;
+                foreach (var t in r.lapTimes) fastest = Mathf.Min(fastest, t);
+                var sb = new System.Text.StringBuilder();
+                sb.Append("<color=" + GhostHex + ">GHOST RUN</color>\n");
+                for (int i = 0; i < r.lapTimes.Count; i++)
+                {
+                    bool f = Mathf.Approximately(r.lapTimes[i], fastest);
+                    sb.Append("<color=#9AA0B4>LAP " + (i + 1) + "</color>    ");
+                    sb.Append(f ? "<color=" + GhostHex + ">" + RaceManager.FormatTime(r.lapTimes[i]) + "</color>" : RaceManager.FormatTime(r.lapTimes[i]));
+                    if (i < r.lapTimes.Count - 1) sb.Append('\n');
+                }
+                if (g != null && g.NewBest && !first) sb.Append("\n<color=#9AA0B4>YOUR NEW GHOST RIDES NEXT RUN</color>");
                 finishLaps.text = sb.ToString();
             }
         }
@@ -217,7 +282,8 @@ namespace ShiftRush.Race
             if (race == null) return;
 
             var p = race.Player;
-            if (positionValue != null && p != null)
+            if (Ghosting) UpdateGhostGap();
+            else if (positionValue != null && p != null)
                 positionValue.text = race.PositionOf(p) + "<size=55%><color=#9AA0B4>/" + race.Racers.Count + "</color></size>";
             if (lapValue != null && p != null)
                 lapValue.text = Mathf.Min(p.lap, race.TotalLaps) + "<size=55%><color=#9AA0B4>/" + race.TotalLaps + "</color></size>";
@@ -256,9 +322,41 @@ namespace ShiftRush.Race
             }
         }
 
+        void UpdateGhostGap()
+        {
+            var g = GhostRun.Current;
+            if (posLabel != null) posLabel.text = "VS GHOST";
+            if (positionValue == null) return;
+            if (g == null || !g.HasGhost) positionValue.text = "<size=55%><color=#9AA0B4>SOLO</color></size>";
+            else if (g.Delta.HasValue) positionValue.text = Gap(g.Delta.Value);
+            else positionValue.text = "<color=" + GhostHex + ">0.00</color>";
+        }
+
+        void UpdateGhostRows()
+        {
+            var g = GhostRun.Current;
+            bool hasGhost = g != null && g.HasGhost;
+            float d = hasGhost && g.Delta.HasValue ? g.Delta.Value : 0f;
+            bool youLead = !hasGhost || d <= 0f;
+            for (int i = 0; i < rows.Length; i++)
+            {
+                var row = rows[i];
+                bool on = i < (hasGhost ? 2 : 1);
+                row.root.SetActive(on);
+                if (!on) continue;
+                bool you = (i == 0) == youLead;
+                row.rank.text = (i + 1).ToString();
+                row.name.text = you ? "YOU" : "GHOST";
+                row.gap.text = i == 0 ? "LEADER" : "+" + Mathf.Abs(d).ToString("0.00");
+                if (row.highlight != null) row.highlight.enabled = you;
+                row.name.color = you ? Color.white : GhostCyan;
+            }
+        }
+
         void UpdateRows()
         {
             if (rows == null) return;
+            if (Ghosting) { UpdateGhostRows(); return; }
             var leader = race.Racers.Count > 0 ? race.Racers[0] : null;
             for (int i = 0; i < rows.Length; i++)
             {
@@ -352,6 +450,29 @@ namespace ShiftRush.Race
                 mapDot.localEulerAngles = Vector3.zero;
             }
             UpdateRivalDots(line);
+            UpdateGhostDot(line);
+        }
+
+        void UpdateGhostDot(RaceLine line)
+        {
+            var g = GhostRun.Current;
+            var gt = g != null ? g.GhostTransform : null;
+            if (gt == null || rivalDot == null) { if (ghostDot != null) ghostDot.gameObject.SetActive(false); return; }
+            if (ghostDot == null)
+            {
+                var go = new GameObject("Ghost Dot", typeof(RectTransform), typeof(Image));
+                ghostDot = (RectTransform)go.transform;
+                ghostDot.SetParent(mapImage.rectTransform, false);
+                ghostDot.sizeDelta = Vector2.one * rivalDotSize;
+                var img = go.GetComponent<Image>();
+                img.sprite = rivalDot; img.raycastTarget = false;
+                img.color = new Color(GhostCyan.r, GhostCyan.g, GhostCyan.b, 0.8f);
+                mapDot.SetAsLastSibling();
+            }
+            ghostDot.gameObject.SetActive(true);
+            ghostDot.anchorMin = ghostDot.anchorMax = line.MapUV(gt.position);
+            ghostDot.anchoredPosition = Vector2.zero;
+            ghostDot.localEulerAngles = Vector3.zero;
         }
 
         /// <summary>Rivals as tinted dots pinned to the map image, so they turn and scale with it.</summary>

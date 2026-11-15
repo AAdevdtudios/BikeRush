@@ -115,6 +115,13 @@ namespace ShiftRush.Core
             set { PlayerPrefs.SetInt(TrackKey, value); }
         }
 
+        /// <summary>Picked at the Start Gate. Pack Race until the player picks something else.</summary>
+        public static RideMode Mode
+        {
+            get { return (RideMode)Mathf.Clamp(PlayerPrefs.GetInt("BR_Mode", (int)RideMode.PackRace), 0, RideModes.All.Length - 1); }
+            set { PlayerPrefs.SetInt("BR_Mode", (int)value); }
+        }
+
         static int CarCount { get { var c = RaceCatalog.Instance; return c != null ? c.cars.Count : 0; } }
         static int TrackCount { get { var c = RaceCatalog.Instance; return c != null ? c.tracks.Count : 0; } }
 

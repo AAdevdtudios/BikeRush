@@ -233,7 +233,7 @@ namespace ShiftRush.EditorTools
             panel.name = "Shop Copy";
             panel = RepurposePanel(canvas, "Shop Copy", MenuRouter.Tune);
             var content = panel.Find("Content");
-            Header(content, "TUNE", "STEP 2 / 3   SET UP YOUR BIKE");
+            Header(content, "TUNE", "STEP 2 / 4   SET UP YOUR BIKE");
 
             var bikeName = Txt(content, "Bike Name", "SWITCHBACK", fontTitle, 56, Color.white, TextAlignmentOptions.Left);
             Place(bikeName.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(124, -262), new Vector2(700, 70));
@@ -311,7 +311,7 @@ namespace ShiftRush.EditorTools
                 for (int k = 0; k < rows[r].notches.Length; k++) np.GetArrayElementAtIndex(k).objectReferenceValue = rows[r].notches[k];
             }
             so.ApplyModifiedPropertiesWithoutUndo();
-            UnityEventTools.AddVoidPersistentListener(tp.onConfirm, router.OpenTracks);
+            UnityEventTools.AddVoidPersistentListener(tp.onConfirm, router.OpenModes);
 
             CloneHotkeys(canvas.Find("Main Content/Home Panel"), content, router, "Back", router.Back);
             return panel.GetComponent<Animator>();
