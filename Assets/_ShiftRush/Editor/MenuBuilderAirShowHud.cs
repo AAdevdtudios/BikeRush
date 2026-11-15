@@ -28,6 +28,7 @@ namespace ShiftRush.EditorTools
 
         static void MakeAirShowHud(Sounds sounds)
         {
+            if (softDisc == null || disc == null) MakeHudArt();
             var root = new GameObject("BR_AirShowHUD", typeof(RectTransform));
             var canvas = root.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -157,15 +158,19 @@ namespace ShiftRush.EditorTools
             finStats.lineSpacing = 16;
             Place(finStats.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 1), new Vector2(520, -40), new Vector2(520, 260));
 
-            // The rank: a huge slanted letter in a frame, right of the score.
-            var rankFrame = Img(fin, "Rank Frame", slantFrame, new Color(1, 1, 1, 0.5f));
-            rankFrame.type = Image.Type.Sliced; rankFrame.pixelsPerUnitMultiplier = 0.6f;
-            Place(rankFrame.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(1180, 40), new Vector2(300, 340));
-            var rl = Txt(rankFrame.transform, "Label", "RANK", fontBold, 22, Steel, TextAlignmentOptions.Center);
-            rl.characterSpacing = 14;
-            Place(rl.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -24), new Vector2(260, 30));
-            var finRank = Txt(rankFrame.transform, "Letter", "S", fontTitle, 260, Amber, TextAlignmentOptions.Center);
-            Place(finRank.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -20), new Vector2(300, 300));
+            // The rank: one huge letter, no frame, stamped in once the score has counted up. A soft flash
+            // behind it pops on impact.
+            var rank = new GameObject("Rank", typeof(RectTransform)).GetComponent<RectTransform>();
+            rank.SetParent(fin, false);
+            Place(rank, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(1280, 20), new Vector2(680, 680));
+            var flash = Img(rank, "Flash", softDisc, new Color(1, 1, 1, 0f));
+            Place(flash.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(620, 620));
+            var rl = Txt(rank, "Label", "RANK", fontBold, 26, Steel, TextAlignmentOptions.Center);
+            rl.characterSpacing = 18;
+            Place(rl.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -20), new Vector2(400, 40));
+            var finRank = Txt(rank, "Letter", "S", fontTitle, 660, Amber, TextAlignmentOptions.Center);
+            finRank.textWrappingMode = TextWrappingModes.NoWrap;
+            Place(finRank.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -40), new Vector2(680, 680));
 
             var finHint = Txt(fin, "Hint", "<color=#FF9E2E>ENTER</color>  RIDE AGAIN      <color=#FF9E2E>M</color>  MAIN MENU", fontBold, 22, Color.white, TextAlignmentOptions.Left);
             finHint.characterSpacing = 6;
@@ -188,6 +193,11 @@ namespace ShiftRush.EditorTools
             so.FindProperty("playGroup").objectReferenceValue = playGroup;
             so.FindProperty("finScore").objectReferenceValue = finScore;
             so.FindProperty("finRank").objectReferenceValue = finRank;
+            so.FindProperty("rankRoot").objectReferenceValue = rank;
+            so.FindProperty("rankFlash").objectReferenceValue = flash;
+            so.FindProperty("rankLabel").objectReferenceValue = rl;
+            so.FindProperty("stamp").objectReferenceValue = sounds.confirm;
+            so.FindProperty("tick").objectReferenceValue = sounds.tick;
             so.FindProperty("finBest").objectReferenceValue = finBest;
             so.FindProperty("finStats").objectReferenceValue = finStats;
             so.FindProperty("finTitle").objectReferenceValue = finTitle;

@@ -24,6 +24,13 @@ namespace ShiftRush.AirShow
         [SerializeField] CanvasGroup hintGroup;
         [SerializeField] CanvasGroup finishGroup, playGroup;
         [SerializeField] TMP_Text finScore, finRank, finBest, finStats, finTitle;
+        [Header("Rank stamp")]
+        [SerializeField] RectTransform rankRoot;
+        [SerializeField] Image rankFlash;
+        [SerializeField] TMP_Text rankLabel;
+        [SerializeField] float countSeconds = 1.3f;
+        [SerializeField] float stampSeconds = 0.17f;
+        [SerializeField] AudioClip stamp, tick;
         [SerializeField] AudioSource audioSource;
         [SerializeField] AudioClip beep, go;
         [SerializeField] Color accent = new Color32(255, 158, 46, 255);
@@ -32,6 +39,10 @@ namespace ShiftRush.AirShow
 
         AirShowRun run;
         float shownScore, popUntil, popPunch, countPunch, finishAt = -1f, hintUntil;
+        float revealAt = -1f, nextTick;
+        bool stamped;
+        Color rankColour;
+        Vector2 finHome, rankHome;
 
         void Start()
         {
@@ -40,7 +51,8 @@ namespace ShiftRush.AirShow
             run.Scored += OnScored;
             run.CountdownTick += OnCount;
             run.Finished += OnFinished;
-            if (finishGroup != null) { finishGroup.alpha = 0f; finishGroup.blocksRaycasts = false; }
+            if (finishGroup != null) { finishGroup.alpha = 0f; finishGroup.blocksRaycasts = false; finHome = ((RectTransform)finishGroup.transform).anchoredPosition; }
+            if (rankRoot != null) rankHome = rankRoot.anchoredPosition;
             if (popGroup != null) popGroup.alpha = 0f;
             if (countdownText != null) countdownText.text = "";
             if (venueText != null) venueText.text = run.Venue + "  <color=#9AA0B4>//  AIR SHOW</color>";
@@ -89,14 +101,14 @@ namespace ShiftRush.AirShow
         void OnFinished()
         {
             finishAt = Time.unscaledTime + 1.2f;
+            if (countdownText != null) countdownText.text = "";
             if (finTitle != null) finTitle.text = run.NewBest && run.Score > 0 ? "NEW HIGH SCORE" : "SHOW'S OVER";
             if (finScore != null) finScore.text = run.Score.ToString("N0");
             string rank = run.Rank(run.Score);
-            if (finRank != null)
-            {
-                finRank.text = rank;
-                finRank.color = rank == "S" ? green : rank == "A" ? accent : rank == "B" ? Color.white : new Color(0.6f, 0.63f, 0.7f);
-            }
+            rankColour = rank == "S" ? green : rank == "A" ? accent : rank == "B" ? Color.white : new Color(0.6f, 0.63f, 0.7f);
+            if (finRank != null) { finRank.text = rank; SetRank(0f, 3f, -22f); }
+            if (rankLabel != null) rankLabel.alpha = 0f;
+            if (finScore != null) finScore.text = "0";
             if (finBest != null) finBest.text = run.Best.ToString("N0");
             if (finStats != null)
                 finStats.text = "<color=#9AA0B4>TRICKS LANDED</color>    " + run.Tricks
@@ -140,12 +152,79 @@ namespace ShiftRush.AirShow
             if (finishGroup != null) finishGroup.alpha = Mathf.MoveTowards(finishGroup.alpha, 1f, dt * 3f);
             if (playGroup != null) playGroup.alpha = Mathf.MoveTowards(playGroup.alpha, 0.2f, dt * 3f);
             if (finishGroup != null && finishGroup.alpha < 0.9f) return;
+            if (revealAt < 0f) revealAt = Time.unscaledTime;
+            bool done = Reveal(Time.unscaledTime - revealAt);
             if (SceneLoader.IsLoading || ShiftRush.UI.PauseMenu.IsPaused) return;
             var kb = Keyboard.current; var pad = Gamepad.current;
             bool again = (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) || (pad != null && pad.buttonSouth.wasPressedThisFrame);
             bool menu = (kb != null && kb.mKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame);
+            if (!done) { if (again) revealAt -= 10f; return; } // first press skips to the stamp
             if (again) RideAgain();
             else if (menu) SceneLoader.Load(MenuScene, "MAIN MENU", "BIKE//RUSH", "");
+        }
+
+        /// <summary>
+        /// The results reveal: the score rolls up from zero with a ticking counter, a beat, then the rank letter
+        /// drops out of the sky huge and tilted, slams down onto the card (flash, thud, the card jolts) and
+        /// settles with a little bounce, left at a rubber-stamp angle. True once it has all landed.
+        /// </summary>
+        bool Reveal(float t)
+        {
+            // 1. Count up.
+            float k = Mathf.Clamp01(t / countSeconds);
+            float eased = 1f - Mathf.Pow(1f - k, 3f);
+            int shown = Mathf.RoundToInt(run.Score * eased);
+            if (finScore != null) finScore.text = shown.ToString("N0");
+            if (k < 1f && run.Score > 0 && Time.unscaledTime >= nextTick)
+            {
+                nextTick = Time.unscaledTime + Mathf.Lerp(0.045f, 0.12f, eased);
+                if (audioSource != null && tick != null) audioSource.PlayOneShot(tick, 0.35f);
+            }
+
+            // 2. The stamp: falls for stampSeconds, accelerating, then bounces.
+            float s = t - countSeconds - 0.3f;
+            if (s < 0f) { SetRank(0f, 3f, -22f); return false; }
+            if (s < stampSeconds)
+            {
+                float f = s / stampSeconds, e = f * f; // speeding up into the card
+                SetRank(Mathf.Clamp01(f * 3f), Mathf.Lerp(3f, 0.88f, e), Mathf.Lerp(-22f, -9f, e));
+                return false;
+            }
+            if (!stamped)
+            {
+                stamped = true;
+                if (audioSource != null)
+                {
+                    if (stamp != null) audioSource.PlayOneShot(stamp, 1f);
+                    if (beep != null) audioSource.PlayOneShot(beep, 0.6f);
+                }
+            }
+            float a = s - stampSeconds;
+            // Bounce up from the squash and settle.
+            float bounce = 1f - 0.12f * Mathf.Cos(a * 22f) * Mathf.Exp(-a * 9f); // a damped spring out of the squash
+            SetRank(1f, bounce, -9f + 1.5f * Mathf.Clamp01(a / 0.28f));
+            // Flash ring and the card's jolt.
+            if (rankFlash != null)
+            {
+                float fl = Mathf.Clamp01(1f - a / 0.45f);
+                rankFlash.color = new Color(rankColour.r, rankColour.g, rankColour.b, 0.75f * fl * fl);
+                rankFlash.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.5f, 1.9f, 1f - fl * fl);
+            }
+            float shake = Mathf.Clamp01(1f - a / 0.32f);
+            Vector2 jolt = new Vector2(Mathf.Sin(a * 90f), Mathf.Cos(a * 71f)) * 16f * shake * shake;
+            if (finishGroup != null) ((RectTransform)finishGroup.transform).anchoredPosition = finHome + jolt * 0.5f;
+            if (rankRoot != null) rankRoot.anchoredPosition = rankHome + jolt;
+            if (rankLabel != null) rankLabel.alpha = Mathf.Clamp01(a / 0.3f);
+            return a > 0.3f;
+        }
+
+        void SetRank(float alpha, float scale, float angle)
+        {
+            if (finRank == null) return;
+            var c = rankColour; c.a = alpha;
+            finRank.color = c;
+            finRank.rectTransform.localScale = Vector3.one * scale;
+            finRank.rectTransform.localEulerAngles = new Vector3(0f, 0f, angle);
         }
 
         public static void RideAgain()
