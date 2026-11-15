@@ -1,0 +1,118 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &6062323670481845529
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1045115777569940612, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1069008960240986437, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      propertyPath: m_Name
+      value: BR_Bike_MTB
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1069008960240986437, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 795911205899077558}
+    - targetCorrespondingSourceObject: {fileID: 1069008960240986437, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8871125977006815548}
+  m_SourcePrefab: {fileID: 100100000, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+--- !u!1 &6553954335680402524 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1069008960240986437, guid: 37dff66c2596206469fa8e56535263ff, type: 3}
+  m_PrefabInstance: {fileID: 6062323670481845529}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &795911205899077558
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6553954335680402524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bf0721b575c74fb79e01ef05d63ec93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShiftRush.Vehicles.BikeVehicleAdapter
+  burnPerSecond: 0.16
+  startBoost: 0.35
+  regenPerSecond: 0.065
+  steerResponse: 5
+  tyreGrip: 1.6
+  tricks: 1
+  trickHeight: 1.8
+  cruiseKmh: 74
+  boostKmh: 112
+  launchAccel: 11
+  boostAccel: 14
+  boostKick: 4.5
+  carveRate: 70
+  carveGrip: 120
+  guideGain: 3.5
+  guideMaxRate: 75
+--- !u!114 &8871125977006815548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6553954335680402524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a358824337d54cd68e40d8456fd484a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShiftRush.Vehicles.VehicleReset
+  killHeight: -15
+  flippedSecondsBeforeReset: 2.5
+  safePointInterval: 0.75
+  controlLockSeconds: 0.6
+  respawnLift: 0.8
+  offTrackSeconds: 2
+  offTrackMargin: 6
+  listenForInput: 1

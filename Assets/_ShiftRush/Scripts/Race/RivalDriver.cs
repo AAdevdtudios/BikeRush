@@ -27,7 +27,7 @@ namespace ShiftRush.Race
         RivalField field;
 
         int nearest = -1;
-        float lane, baseLane, stuckTime, steerSmooth, wantLane = float.NaN;
+        float lane, baseLane, stuckTime, steerSmooth, airTime, wantLane = float.NaN;
         ShortcutPath onShortcut, decidedFor;
         bool decidedTake;
         readonly List<Transform> ramps = new List<Transform>();
@@ -43,8 +43,11 @@ namespace ShiftRush.Race
             reset = GetComponent<VehicleReset>();
             lane = startLane;
             // Each rival keeps to its own part of the road, so they don't all queue on the centreline.
-            baseLane = Mathf.Clamp(startLane * 0.5f + Random.Range(-2f, 2f), -5f, 5f);
+            float edge = Mathf.Clamp(line.halfWidth - 3f, 1.5f, 5f); // narrow bike trails as well as wide roads
+            baseLane = Mathf.Clamp(startLane * 0.5f + Random.Range(-2f, 2f), -edge, edge);
             foreach (var r in FindObjectsByType<ShiftRamp>(FindObjectsSortMode.None)) ramps.Add(r.transform);
+            // Bikes: each rival pedals at their own pace (a share of their top speed); boost scales with it.
+            if (vehicle is BikeVehicleAdapter bike) bike.SetCruiseSpeed(profile.topSpeedKmh * 0.78f);
         }
 
         void FixedUpdate()
@@ -113,12 +116,23 @@ namespace ShiftRush.Race
             // ---- nitro: earned on SHIFT ramps, fired on straights
             CheckRamps(p);
             if (tank != null && field.nitroPerSecond > 0f && !me.finished) tank.AddNitro(field.nitroPerSecond * dt);
-            bool nitro = tank != null && tank.Nitro01 > 0.05f && err > 8f && Mathf.Abs(steerSmooth) < 0.2f && !me.finished;
+            // Bikes: big air pays boost on landing, like the player's stunts.
+            if (field.airForBoost > 0f && tank != null)
+            {
+                if (!vehicle.AnyWheelGrounded) airTime += dt;
+                else
+                {
+                    if (airTime > field.airForBoost && !me.finished)
+                        tank.AddNitro(Random.Range(field.rampNitro.x, field.rampNitro.y) * Mathf.Min(airTime, 2f));
+                    airTime = 0f;
+                }
+            }
+            bool nitro = tank != null && tank.Nitro01 > 0.05f && err > field.nitroSpeedGap && Mathf.Abs(steerSmooth) < 0.2f && !me.finished;
 
             // ---- stuck: back on the line
             bool racing = race.CurrentState != RaceManager.State.Countdown && !me.suspended;
             stuckTime = racing && speed < 2f ? stuckTime + dt : 0f;
-            if (stuckTime > 3f && reset != null) { stuckTime = 0f; onShortcut = null; reset.ResetNow(); }
+            if (stuckTime > 3f && reset != null) { stuckTime = 0f; onShortcut = null; reset.ResetNow("stuck"); }
 
             input.SetDriverInput(steerSmooth, throttle, brake, 0f, nitro);
         }

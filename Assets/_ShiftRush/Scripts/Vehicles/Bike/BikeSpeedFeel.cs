@@ -1,0 +1,159 @@
+using SBPScripts;
+using UnityEngine;
+
+namespace ShiftRush.Vehicles
+{
+    /// <summary>
+    /// Makes speed read on screen. The pack's chase camera sits far back on a 40° lens, which flattens everything
+    /// into a slow crawl. This pulls the camera in on a wide lens that opens further as the bike speeds up, punches
+    /// out when boost kicks in, and adds a fine high-speed shake. Installs itself on any camera with a BicycleCamera.
+    /// </summary>
+    [DefaultExecutionOrder(200)] // after BicycleCamera has placed the camera this frame
+    public class BikeSpeedFeel : MonoBehaviour
+    {
+        [SerializeField] float baseFov = 68f;
+        [SerializeField] float fastFov = 92f;
+        [Tooltip("Speed (km/h) at which the lens is fully open.")]
+        [SerializeField] float fastKmh = 110f;
+        [SerializeField] float boostKick = 6f;
+        [SerializeField] float chaseDistance = 3.6f;
+        [SerializeField] float chaseHeight = 1.85f;
+        [Tooltip("Shake (metres) at full speed.")]
+        [SerializeField] float shake = 0.05f;
+
+        [Header("Speed lines")]
+        [Tooltip("Speed lines start at this speed (km/h) and are thickest at top boost speed.")]
+        [SerializeField] float linesFromKmh = 66f, linesFullKmh = 112f;
+        [SerializeField] float linesPerSecond = 180f;
+
+        Camera cam;
+        ParticleSystem lines;
+        UnityEngine.Rendering.Universal.MotionBlur blur;
+
+        [Header("Post")]
+        [Tooltip("Camera motion blur at top speed (0..1). Most of the sense of speed at 70+ km/h.")]
+        [SerializeField] float blurAtSpeed = 0.55f;
+        [SerializeField] float bloom = 0.7f;
+        float lineDebt;
+        BicycleCamera chase;
+        BikeVehicleAdapter bike;
+        float fov, kick;
+        bool wasBoosting;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void Install()
+        {
+            foreach (var c in FindObjectsByType<BicycleCamera>(FindObjectsSortMode.None))
+                if (c.GetComponent<BikeSpeedFeel>() == null) c.gameObject.AddComponent<BikeSpeedFeel>();
+        }
+
+        void Start()
+        {
+            cam = GetComponent<Camera>();
+            chase = GetComponent<BicycleCamera>();
+            if (chase != null) { chase.distance = chaseDistance; chase.height = chaseHeight; }
+            fov = baseFov;
+            lines = MakeLines();
+            MakePost();
+        }
+
+        /// <summary>A global volume of our own: motion blur that grows with speed, and a soft bloom for the glows.</summary>
+        void MakePost()
+        {
+            var data = GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+            if (data != null) data.renderPostProcessing = true;
+            var go = new GameObject("Speed Post");
+            var vol = go.AddComponent<UnityEngine.Rendering.Volume>();
+            vol.isGlobal = true;
+            vol.priority = 10f;
+            var profile = ScriptableObject.CreateInstance<UnityEngine.Rendering.VolumeProfile>();
+            blur = profile.Add<UnityEngine.Rendering.Universal.MotionBlur>(true);
+            blur.intensity.value = 0f;
+            blur.clamp.value = 0.06f;
+            blur.quality.value = UnityEngine.Rendering.Universal.MotionBlurQuality.Medium;
+            var b = profile.Add<UnityEngine.Rendering.Universal.Bloom>(true);
+            b.intensity.value = bloom;
+            b.threshold.value = 1.1f;
+            b.scatter.value = 0.6f;
+            vol.sharedProfile = profile;
+        }
+
+        ParticleSystem MakeLines()
+        {
+            var go = new GameObject("Speed Lines");
+            go.transform.SetParent(transform, false);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.startLifetime = 0.26f;
+            main.startSpeed = 0f;
+            main.maxParticles = 400;
+            main.playOnAwake = false;
+            var emission = ps.emission; emission.enabled = false;
+            // Fade out before they reach the lens, so none sweep past as big beams.
+            var col = ps.colorOverLifetime; col.enabled = true;
+            var grad = new Gradient();
+            grad.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                         new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(0.8f, 0.6f), new GradientAlphaKey(0f, 1f) });
+            col.color = new ParticleSystem.MinMaxGradient(grad);
+            var shape = ps.shape; shape.enabled = false;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.renderMode = ParticleSystemRenderMode.Stretch;
+            r.velocityScale = 0.09f;
+            r.lengthScale = 1f;
+            r.sharedMaterial = Resources.Load<Material>("M_SpeedLines");
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            ps.Play();
+            return ps;
+        }
+
+        void EmitLines(float kmh, bool boosting)
+        {
+            if (lines == null) return;
+            float t = Mathf.InverseLerp(linesFromKmh, linesFullKmh, kmh);
+            if (boosting) t = Mathf.Max(t, 0.5f);
+            if (t <= 0f || Time.timeScale < 0.9f) { lineDebt = 0f; return; }
+            lineDebt += t * linesPerSecond * (boosting ? 1.6f : 1f) * Time.deltaTime;
+            var e = new ParticleSystem.EmitParams();
+            while (lineDebt >= 1f)
+            {
+                lineDebt -= 1f;
+                Vector2 ring = Random.insideUnitCircle.normalized * Random.Range(2.6f, 6.5f);
+                e.position = new Vector3(ring.x * 1.7f, ring.y * 0.75f + 0.6f, 26f); // wide oval: more at the sides than top and bottom
+                e.velocity = new Vector3(0f, 0f, -Random.Range(55f, 75f));
+                e.startSize = Random.Range(0.025f, 0.05f);
+                float a = Random.Range(0.25f, 0.55f);
+                e.startColor = boosting && Random.value < 0.4f ? new Color(1f, 0.3f, 0.85f, a + 0.2f) : new Color(1f, 1f, 1f, a);
+                lines.Emit(e, 1);
+            }
+        }
+
+        void LateUpdate()
+        {
+            if (cam == null) return;
+            if (bike == null && chase != null && chase.target != null) bike = chase.target.GetComponentInParent<BikeVehicleAdapter>();
+            float kmh = bike != null ? Mathf.Abs(bike.SpeedKmh) : 0f;
+            float t = Mathf.Clamp01(kmh / fastKmh);
+            bool boosting = bike != null && bike.NitroActive;
+            if (boosting && !wasBoosting) kick = 1f;
+            wasBoosting = boosting;
+            kick = Mathf.MoveTowards(kick, boosting ? 0.6f : 0f, Time.unscaledDeltaTime * 1.5f);
+
+            float want = Mathf.Lerp(baseFov, fastFov, t * t) + kick * boostKick;
+            fov = Mathf.Lerp(fov, want, 1f - Mathf.Exp(-4f * Time.unscaledDeltaTime));
+            cam.fieldOfView = fov;
+            EmitLines(kmh, boosting);
+            if (blur != null) blur.intensity.value = blurAtSpeed * Mathf.InverseLerp(40f, fastKmh, kmh) * (boosting ? 1.25f : 1f);
+
+            if (Time.timeScale > 0.9f && t > 0.4f)
+            {
+                float a = shake * Mathf.InverseLerp(0.4f, 1f, t) * (boosting ? 1.6f : 1f);
+                float n = Time.time * 23f;
+                transform.position += transform.right * (Mathf.PerlinNoise(n, 0.3f) - 0.5f) * 2f * a
+                                    + transform.up * (Mathf.PerlinNoise(0.7f, n) - 0.5f) * 2f * a;
+            }
+        }
+    }
+}

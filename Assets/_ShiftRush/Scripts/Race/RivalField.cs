@@ -17,6 +17,8 @@ namespace ShiftRush.Race
             public string name = "KESTREL";
             [Tooltip("Paint swapped in for the car's own body paint.")]
             public Material livery;
+            [Tooltip("Swapped in for the second paint (a bike's rider jersey); optional.")]
+            public Material livery2;
             [Tooltip("Dot colour on the minimap.")]
             public Color color = Color.white;
             [Tooltip("How hard they take corners. 1 = cautious, 1.5 = on the limit.")]
@@ -30,6 +32,8 @@ namespace ShiftRush.Race
         public GameObject carPrefab;
         [Tooltip("The body paint on that prefab that each rival's livery replaces.")]
         public Material paintToReplace;
+        [Tooltip("A second paint each rival's livery2 replaces (bikes: the rider's jersey). Optional.")]
+        public Material paint2ToReplace;
         public List<Rival> rivals = new List<Rival>();
 
         [Header("Grid")]
@@ -48,6 +52,10 @@ namespace ShiftRush.Race
         [System.NonSerialized] public float pushFromBehind = -1f, easeOutFront = -1f, nitroPerSecond;
         [Tooltip("Nitro a rival earns when it jumps a SHIFT ramp (min, max of a full tank).")]
         public Vector2 rampNitro = new Vector2(0.35f, 0.9f);
+        [Tooltip("Fire nitro when the road allows this much more speed (m/s) than they have. Bikes: small, cars: ~8.")]
+        public float nitroSpeedGap = 8f;
+        [Tooltip("Seconds in the air that earn boost on landing (bikes; 0 = off). Pays rampNitro × air seconds.")]
+        public float airForBoost = 0f;
 
         public static RivalField Load() { return Resources.Load<RivalField>("SR_RivalField"); }
     }

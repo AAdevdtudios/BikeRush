@@ -60,6 +60,7 @@ namespace ShiftRush.Race
                 var go = v.Transform.gameObject;
                 go.name = "Rival - " + rival.name;
                 Paint(go, f.paintToReplace, rival.livery);
+                Paint(go, f.paint2ToReplace, rival.livery2);
                 var reset = go.GetComponent<VehicleReset>();
                 if (reset != null) reset.listenForInput = false;
                 if (level.carBoost != 1f) VehicleSpawn.Boost(go, level.carBoost);
@@ -73,7 +74,7 @@ namespace ShiftRush.Race
         {
             return new RivalField.Rival
             {
-                name = r.name, livery = r.livery, color = r.color, shortcutChance = r.shortcutChance,
+                name = r.name, livery = r.livery, livery2 = r.livery2, color = r.color, shortcutChance = r.shortcutChance,
                 grip = r.grip * pace, topSpeedKmh = r.topSpeedKmh * pace,
             };
         }

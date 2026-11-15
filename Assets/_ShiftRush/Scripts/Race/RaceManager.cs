@@ -42,6 +42,8 @@ namespace ShiftRush.Race
         }
 
         [SerializeField] float countdownStep = 1f;
+        /// <summary>Boost everyone has on the grid, so it can be used from GO (more is earned from stunts).</summary>
+        public const float StartBoost = 0.35f;
         [SerializeField] float goHold = 0.8f;
 
         public static RaceManager Current { get; private set; }
@@ -83,7 +85,12 @@ namespace ShiftRush.Race
         void Start()
         {
             foreach (var mb in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
-                if (mb is IVehicle v) { AddRacer(v, "YOU", true); break; }
+                if (mb is IVehicle v)
+                {
+                    AddRacer(v, "YOU", true);
+                    if (v is BikeVehicleAdapter bike && Line != null) bike.Guide = TrackGuide.Attach(bike.gameObject, Line);
+                    break;
+                }
             RaceGrid.Fill(this, Player); // grid slots and the rivals
             CurrentState = State.Countdown;
             countdownStart = Time.time;
@@ -102,7 +109,7 @@ namespace ShiftRush.Race
             Racers.Add(r);
             if (isPlayer) Player = r;
             // Nitro is earned from SHIFT ramps in a race: start empty, no regeneration.
-            if (vehicle is INitroTank tank) { tank.SetRegeneration(false); tank.SetNitro(0f); }
+            if (vehicle is INitroTank tank) { tank.SetRegeneration(true); tank.SetNitro(StartBoost); } // boost refills by itself; stunts top it up faster
             if (CurrentState == State.Countdown) vehicle.SetControllable(false);
             return r;
         }

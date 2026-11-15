@@ -51,18 +51,18 @@ namespace ShiftRush.Vehicles
             if (unlockAt > 0f && Time.time >= unlockAt) { vehicle.SetControllable(true); unlockAt = -1f; }
 
             var kb = Keyboard.current;
-            if (listenForInput && kb != null && kb.rKey.wasPressedThisFrame) { ResetNow(); return; }
+            if (listenForInput && kb != null && kb.rKey.wasPressedThisFrame) { ResetNow("R key"); return; }
 
-            if (transform.position.y < killHeight) { ResetNow(); return; }
+            if (transform.position.y < killHeight) { ResetNow("fell"); return; }
 
             bool upsideDown = Vector3.Dot(transform.up, Vector3.up) < 0.2f;
             flippedTimer = upsideDown && vehicle.Body.linearVelocity.magnitude < 3f ? flippedTimer + Time.deltaTime : 0f;
-            if (flippedTimer > flippedSecondsBeforeReset) { ResetNow(); return; }
+            if (flippedTimer > flippedSecondsBeforeReset) { ResetNow("flipped"); return; }
 
             // Beached: hung up on a rail or rock, wheels not all down, barely moving.
             bool beached = !vehicle.AllWheelsGrounded && Mathf.Abs(vehicle.SpeedKmh) < 8f && Vector3.Dot(transform.up, Vector3.up) < 0.94f;
             beachedTimer = beached ? beachedTimer + Time.deltaTime : 0f;
-            if (beachedTimer > 3f) { ResetNow(); return; }
+            if (beachedTimer > 3f) { ResetNow("beached"); return; }
 
             // Off the circuit: past the verge and not on a shortcut. Ignored far from the line (SHIFT worlds).
             var line = Race.RaceLine.Current;
@@ -73,7 +73,7 @@ namespace ShiftRush.Vehicles
                 float away = (line.points[lineHint] - transform.position).magnitude;
                 bool off = away < 150f && lat > line.halfWidth + offTrackMargin && !Race.ShortcutPath.OnAny(transform.position, 3f);
                 offTimer = off ? offTimer + Time.deltaTime : 0f;
-                if (offTimer > offTrackSeconds) { ResetNow(); return; }
+                if (offTimer > offTrackSeconds) { ResetNow("off track"); return; }
             }
 
             if (!hasOverride)
@@ -91,8 +91,12 @@ namespace ShiftRush.Vehicles
         /// <summary>Any car put back on the track (R, flipped, off-track or stuck).</summary>
         public static event System.Action<VehicleReset> Respawned;
 
-        public void ResetNow()
+        /// <summary>Why the last reset happened (R key, fell, flipped, beached, off track, stuck).</summary>
+        public string LastReason { get; private set; }
+
+        public void ResetNow(string why = "asked")
         {
+            LastReason = why;
             flippedTimer = 0f; offTimer = 0f; beachedTimer = 0f;
             Vector3 pos; Quaternion rot;
             if (!OnRaceLine(out pos, out rot)) { pos = safePos; rot = safeRot; }

@@ -17,19 +17,44 @@ namespace ShiftRush.Vehicles
     {
         [Header("Boost")]
         [Tooltip("Share of the tank burned per second while boosting.")]
-        [SerializeField] float burnPerSecond = 0.22f;
+        [SerializeField] float burnPerSecond = 0.16f;
         [Tooltip("Share of the tank the bike starts a race with.")]
         [SerializeField, Range(0f, 1f)] float startBoost = 0.35f;
-        [Tooltip("Slow refill per second when regeneration is on (free roam). Races turn it off.")]
-        [SerializeField] float regenPerSecond = 0.05f;
+        [Tooltip("Refill per second while not boosting (races and free roam): empty to full in about 15 s.")]
+        [SerializeField] float regenPerSecond = 0.065f;
 
         [Header("Feel")]
         [Tooltip("How quickly steering follows the stick (the pack's own value is 5).")]
         [SerializeField] float steerResponse = 5f;
+        [Tooltip("Tyre grip. The pack's ~0.5 lets the front wheel slide sideways on our trails, so the bike barely turns.")]
+        [SerializeField] float tyreGrip = 1.6f;
         [Tooltip("Turn off the pack's own freestyle air rotation (stunts are played by the StuntDirector).")]
         [SerializeField] bool tricks = true;
         [Tooltip("Height above the ground (m) at which the pack's stunt mode starts (its default is 5).")]
         [SerializeField] float trickHeight = 1.8f;
+        [Tooltip("Pedalling speed on the flat (km/h). The pack's own 32 felt like a stroll.")]
+        [SerializeField] float cruiseKmh = 74f;
+        [Tooltip("Top speed while boosting (km/h).")]
+        [SerializeField] float boostKmh = 112f;
+        [Tooltip("Arcade launch: extra acceleration (m/s²) while pedalling below cruise speed. The pack alone takes ~4 s to get going.")]
+        [SerializeField] float launchAccel = 11f;
+        [Tooltip("Acceleration (m/s²) while boosting, up to boost speed.")]
+        [SerializeField] float boostAccel = 14f;
+        [Tooltip("Instant speed (m/s) added the moment boost kicks in.")]
+        [SerializeField] float boostKick = 4.5f;
+        [Tooltip("Arcade carving: extra turn (degrees/second) at full steer on the ground. The pack alone manages about 0.35 g, so at race speed a bike can't hold a bend.")]
+        [SerializeField] float carveRate = 70f;
+        [Tooltip("How fast sideways slide is turned into forward speed (degrees/second): grip like a racing game.")]
+        [SerializeField] float carveGrip = 120f;
+        [Tooltip("With a track guide (the player in a race): how hard the bike turns to follow the trail.")]
+        [SerializeField] float guideGain = 3.5f;
+        [Tooltip("Fastest the guide will turn the bike (degrees/second).")]
+        [SerializeField] float guideMaxRate = 75f;
+
+        /// <summary>Track steering help (set on the player's bike by the race). Null = raw steering.</summary>
+        public ISteerGuide Guide { get; set; }
+        float guidedSteer;
+        bool guided;
 
         BicycleController bike;
         Rigidbody body;
@@ -113,6 +138,13 @@ namespace ShiftRush.Vehicles
                 bike.airTimeSettings.airTimeRotationSensitivity = 0f; // the pack's per-step kick spins far too fast: we set the rate ourselves
             }
             tank = startBoost;
+            if (bike.wheelFrictionSettings != null && tyreGrip > 0f)
+            {
+                bike.wheelFrictionSettings.fFriction = new Vector2(tyreGrip, tyreGrip);
+                bike.wheelFrictionSettings.rFriction = new Vector2(tyreGrip, tyreGrip);
+                bike.topSpeed = boostKmh / 3.6f;
+                bike.relaxedSpeed = Mathf.Clamp01(cruiseKmh / boostKmh);
+            }
         }
 
         void Start()
@@ -149,8 +181,10 @@ namespace ShiftRush.Vehicles
             float pedal = Mathf.Clamp(throttle - brake, -1f, 1f);
             accelAxis = Mathf.MoveTowards(accelAxis, pedal, Time.unscaledDeltaTime);
 
-            bike.customSteerAxis = steerAxis;
-            bike.customLeanAxis = Mathf.Clamp(steerAxis, -1f, 1f);
+            // On a guided bike the pack steers (and leans) by the turn the trail asks for, not the raw stick.
+            float packSteer = guided ? guidedSteer : steerAxis;
+            bike.customSteerAxis = packSteer;
+            bike.customLeanAxis = Mathf.Clamp(packSteer, -1f, 1f);
             bike.customAccelerationAxis = accelAxis;
             bike.rawCustomAccelerationAxis = pedal > 0.1f ? 1f : pedal < -0.1f ? -1f : 0f;
 
@@ -164,6 +198,28 @@ namespace ShiftRush.Vehicles
             if (boosting) tank = Mathf.Max(0f, tank - burnPerSecond * dt);
             else if (regen) tank = Mathf.Min(1f, tank + regenPerSecond * dt);
             bike.sprint = boosting;
+
+            // Rivals don't do stunts (yet): off a jump they're levelled for the landing, so they ride it out.
+            if (driven)
+            {
+                aiAir = AnyWheelGrounded ? 0f : aiAir + dt;
+                if (aiAir > 0.25f) { HoldPose(LevelPose(), 6f); aiPosed = true; }
+                else if (aiPosed) { ReleasePose(); aiPosed = false; }
+            }
+        }
+
+        float aiAir;
+        bool aiPosed;
+
+        /// <summary>Level with the ground below (matching a slope), facing the way the bike is travelling.</summary>
+        public Quaternion LevelPose()
+        {
+            Vector3 n;
+            if (GroundBelow(body.position + Vector3.up * 0.5f, 200f, out n) > 199f || Vector3.Angle(n, Vector3.up) > 35f) n = Vector3.up;
+            Vector3 fwd = Vector3.ProjectOnPlane(body.linearVelocity, n);
+            if (fwd.sqrMagnitude < 1f) fwd = Vector3.ProjectOnPlane(transform.forward, n);
+            if (fwd.sqrMagnitude < 0.0001f) fwd = Vector3.ProjectOnPlane(transform.up, n);
+            return Quaternion.LookRotation(fwd.normalized, n);
         }
 
         /// <summary>
@@ -175,7 +231,20 @@ namespace ShiftRush.Vehicles
 
         void FixedUpdate()
         {
-            if (!posed || body == null || !controllable) return;
+            guided = false; // Carve() sets it again while the trail is steering
+            // Parked (the countdown, a bail): hold still. The pack's brake turns into reverse once the bike
+            // starts rolling back, so on a slope the whole grid used to drift backwards before GO.
+            if (!controllable && body != null && AnyWheelGrounded && body.linearVelocity.sqrMagnitude < 9f)
+            {
+                foreach (var rb in bodies)
+                {
+                    if (rb == null) continue;
+                    rb.linearVelocity = new Vector3(0f, Mathf.Min(rb.linearVelocity.y, 0f), 0f);
+                    if (rb != body) rb.angularVelocity = Vector3.zero;
+                }
+            }
+            if (!posed) { Carve(); Drive(); return; }
+            if (body == null || !controllable) return;
             Quaternion want = poseFollow <= 0f ? poseTarget
                 : Quaternion.Slerp(body.rotation, poseTarget, 1f - Mathf.Exp(-poseFollow * Time.fixedDeltaTime));
             Quaternion delta = want * Quaternion.Inverse(body.rotation);
@@ -188,6 +257,69 @@ namespace ShiftRush.Vehicles
                 rb.rotation = delta * rb.rotation;
                 rb.linearVelocity = v;
                 rb.angularVelocity = rb == body ? Vector3.zero : delta * rb.angularVelocity; // wheels keep spinning
+            }
+        }
+
+        bool kicked;
+
+        /// <summary>Arcade pace: a quick launch up to cruise, a shove when boost lights, a hard pull while it burns.</summary>
+        void Drive()
+        {
+            if (body == null || !controllable || !AnyWheelGrounded) { kicked = boosting && kicked; return; }
+            float dt = Time.fixedDeltaTime;
+            Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+            float along = Vector3.Dot(body.linearVelocity, fwd);
+            float accel = 0f;
+            if (boosting)
+            {
+                if (!kicked) { kicked = true; foreach (var rb in bodies) if (rb != null) rb.linearVelocity += fwd * boostKick; }
+                if (along < boostKmh / 3.6f) accel = boostAccel;
+            }
+            else
+            {
+                kicked = false;
+                if (accelAxis > 0.1f && along > -0.5f && along < bike.topSpeed * bike.relaxedSpeed) accel = launchAccel * accelAxis;
+            }
+            if (accel > 0f) foreach (var rb in bodies) if (rb != null) rb.linearVelocity += fwd * accel * dt;
+        }
+
+        /// <summary>
+        /// Arcade cornering on the ground: turn the frame and both wheels together about the frame's centre, and
+        /// swing the momentum round with them, so steering carves a line instead of sliding wide.
+        /// </summary>
+        void Carve()
+        {
+            if (body == null || !controllable || !AnyWheelGrounded) return;
+            float dt = Time.fixedDeltaTime;
+            Vector3 v = body.linearVelocity;
+            Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+            Vector3 vh = new Vector3(v.x, 0f, v.z);
+            float speed = vh.magnitude;
+            if (speed < 2f || Vector3.Dot(vh, fwd) < 0f) return; // not when crawling or rolling backwards
+
+            float ramp = Mathf.InverseLerp(2f, 8f, speed);
+            float yaw;
+            Vector3 aim = Vector3.zero;
+            guided = !driven && Guide != null && Guide.Aim(body.position, speed, steerAxis, out aim);
+            if (guided)
+            {
+                float err = Vector3.SignedAngle(fwd, aim, Vector3.up);
+                guidedSteer = Mathf.Clamp(err / 40f, -1f, 1f);
+                float rate = Mathf.Clamp(err * guideGain, -guideMaxRate, guideMaxRate);
+                yaw = rate * ramp * dt;
+            }
+            else yaw = steerAxis * carveRate * ramp * dt;
+            Quaternion turn = Quaternion.AngleAxis(yaw, Vector3.up);
+            fwd = turn * fwd;
+            // Grip: bring the travel direction round to where the bike points.
+            Vector3 vhNew = Vector3.RotateTowards(turn * vh, fwd * speed, carveGrip * Mathf.Deg2Rad * dt, 0f);
+            Vector3 dv = vhNew - vh;
+            Vector3 pivot = body.worldCenterOfMass;
+            foreach (var rb in bodies)
+            {
+                if (rb == null) continue;
+                if (yaw != 0f) { rb.position = pivot + turn * (rb.position - pivot); rb.rotation = turn * rb.rotation; }
+                rb.linearVelocity += dv;
             }
         }
 
@@ -206,7 +338,18 @@ namespace ShiftRush.Vehicles
             aiSteer = Mathf.Clamp(steer, -1f, 1f); aiThrottle = Mathf.Clamp01(throttle); aiBrake = Mathf.Clamp01(brake);
             aiHop = handbrake; aiBoost = nitro;
         }
-        public void ReleaseDriverInput() { driven = false; }
+        /// <summary>Sets how fast this bike pedals without boost (km/h); boost scales with it.</summary>
+        public void SetCruiseSpeed(float kmh)
+        {
+            if (bike == null || bike.relaxedSpeed <= 0f || kmh <= 0f) return;
+            bike.topSpeed = kmh / 3.6f / bike.relaxedSpeed;
+        }
+
+        public void ReleaseDriverInput()
+        {
+            driven = false;
+            if (aiPosed) { ReleasePose(); aiPosed = false; }
+        }
 
         // ---- IVehicle
         public void SetControllable(bool on) { controllable = on; }

@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7dfa6a976f6c74d528f309fa4c57e8ba, type: 3}
+  m_Name: SR_RivalField
+  m_EditorClassIdentifier: Assembly-CSharp::ShiftRush.Race.RivalField
+  carPrefab: {fileID: 6553954335680402524, guid: 6b4c7c22a6cc14c15832c42e2eb09c78, type: 3}
+  paintToReplace: {fileID: 2926557707537190794, guid: 2c5aa5285942e1f438e7f7703f9b8b88, type: 3}
+  paint2ToReplace: {fileID: 2100000, guid: 7c40c82484f31a24399487f1ca6141d2, type: 2}
+  rivals:
+  - name: KESTREL
+    livery: {fileID: 2100000, guid: e9801624c3be84813b2cac29720e2bb8, type: 2}
+    livery2: {fileID: 2100000, guid: 15adb591c6961470abfaf2498759ac9b, type: 2}
+    color: {r: 1, g: 0.55, b: 0.1, a: 1}
+    grip: 1.1
+    topSpeedKmh: 90
+    shortcutChance: 0.5
+  - name: VANTA
+    livery: {fileID: 2100000, guid: 32bb009f61294427c9b3c0c18e0ed8df, type: 2}
+    livery2: {fileID: 2100000, guid: 0ed421a62d5e44f418467dfad8785934, type: 2}
+    color: {r: 0.2, g: 0.85, b: 1, a: 1}
+    grip: 1.15
+    topSpeedKmh: 93.5
+    shortcutChance: 0.5
+  - name: MOSSBACK
+    livery: {fileID: 2100000, guid: c4fede4e24bd34d518ccf0cb39f584af, type: 2}
+    livery2: {fileID: 2100000, guid: 95c919ddbf3a343ac97f5a3586e60aec, type: 2}
+    color: {r: 0.45, g: 0.9, b: 0.3, a: 1}
+    grip: 1.2
+    topSpeedKmh: 97
+    shortcutChance: 0.5
+  - name: RIPCORD
+    livery: {fileID: 2100000, guid: cdda221aa15a84622ace5d83d8b3ff67, type: 2}
+    livery2: {fileID: 2100000, guid: 5bf6424d8908a49acb76489e8d7e51cc, type: 2}
+    color: {r: 1, g: 0.85, b: 0.15, a: 1}
+    grip: 1.25
+    topSpeedKmh: 100.5
+    shortcutChance: 0.5
+  - name: HALCYON
+    livery: {fileID: 2100000, guid: ca0074be56bba4201a4aa6a5f27f4d6e, type: 2}
+    livery2: {fileID: 2100000, guid: 1164848bbdd1f48e4b2c6f194db3ffcb, type: 2}
+    color: {r: 0.7, g: 0.45, b: 1, a: 1}
+    grip: 1.3000001
+    topSpeedKmh: 104
+    shortcutChance: 0.5
+  playerGridSlot: 4
+  firstRowBack: 5
+  rowSpacing: 5
+  laneSpacing: 2.2
+  catchUp: 0.06
+  rampNitro: {x: 0.12, y: 0.22}
+  nitroSpeedGap: 2.5
+  airForBoost: 0.8
