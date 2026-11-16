@@ -92,15 +92,33 @@ namespace ShiftRush.EditorTools
             land.SetParent(root.transform, false);
             Place(land, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -170), new Vector2(520, 260));
             var landGroup = land.gameObject.AddComponent<CanvasGroup>();
+            // The fill: a solid diamond inside the target that grows as the closing diamond nears and turns green
+            // in the window, so there's one thing to watch.
+            var diamondFill = SaveSprite("T_DiamondFill", 128, 128, (x, y, w, h) =>
+                Mathf.Clamp01(54f - (Mathf.Abs(x - w * 0.5f) + Mathf.Abs(y - h * 0.5f)) + 0.5f), Vector4.zero);
+            var fillD = Img(land, "Fill Diamond", diamondFill, new Color(1, 1, 1, 0f));
+            Place(fillD.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(104, 104));
             var target = Img(land, "Target Diamond", diamondFrame, Color.white);
-            Place(target.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96));
+            Place(target.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(120, 120));
             var closer = Img(land, "Closing Diamond", diamondFrame, Magenta);
-            Place(closer.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96));
+            Place(closer.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(120, 120));
+            var now = Txt(land, "Now", "NOW!", fontTitle, 64, new Color32(61, 255, 138, 255), TextAlignmentOptions.Center);
+            now.textWrappingMode = TextWrappingModes.NoWrap;
+            Place(now.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(170, 0), new Vector2(240, 80));
             var trick = Txt(land, "Trick", "BACKFLIP 360", fontTitle, 54, Color.white, TextAlignmentOptions.Center);
             Place(trick.rectTransform, new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1), new Vector2(0, 0), new Vector2(0, 64));
-            var key = Txt(land, "Key", "SHIFT TO LAND", fontBold, 18, Steel, TextAlignmentOptions.Center);
-            key.characterSpacing = 12;
-            Place(key.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0.5f, 0), new Vector2(0, 8), new Vector2(0, 26));
+            var key = Txt(land, "Key", "SHIFT TO LAND", fontTitle, 28, Color.white, TextAlignmentOptions.Center);
+            if (dirtOutline != null) key.fontSharedMaterial = dirtOutline; // ink outline: reads over sky and pines
+            key.characterSpacing = 8;
+            Place(key.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0.5f, 0), new Vector2(0, 8), new Vector2(0, 30));
+            // Lesson and miss tips on a strip of dark gaffer tape (sized to the words at runtime), so they read
+            // over bright sky as well as dark pines.
+            var coachTape = Img(land, "Coach", slant, new Color(Ink.r, Ink.g, Ink.b, 0.88f));
+            coachTape.type = Image.Type.Sliced;
+            Place(coachTape.rectTransform, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 1), new Vector2(0, -6), new Vector2(700, 50));
+            var coach = Txt(coachTape.transform, "Text", "", fontMarker != null ? fontMarker : fontBold, 26, Color.white, TextAlignmentOptions.Center);
+            coach.textWrappingMode = TextWrappingModes.NoWrap;
+            Stretch(coach.rectTransform);
             var stunts = root.AddComponent<ShiftRush.Stunts.StuntDirector>();
             var sso = new SerializedObject(stunts);
             sso.FindProperty("landGroup").objectReferenceValue = landGroup;
@@ -108,6 +126,9 @@ namespace ShiftRush.EditorTools
             sso.FindProperty("closingDiamond").objectReferenceValue = closer;
             sso.FindProperty("trickText").objectReferenceValue = trick;
             sso.FindProperty("keyText").objectReferenceValue = key;
+            sso.FindProperty("fillDiamond").objectReferenceValue = fillD;
+            sso.FindProperty("nowText").objectReferenceValue = now;
+            sso.FindProperty("coachText").objectReferenceValue = coach;
             sso.FindProperty("accent").colorValue = Magenta;
             sso.ApplyModifiedPropertiesWithoutUndo();
 

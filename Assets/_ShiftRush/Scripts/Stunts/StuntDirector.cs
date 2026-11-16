@@ -71,12 +71,21 @@ namespace ShiftRush.Stunts
         [SerializeField] float bailTilt = 60f;
         [SerializeField] float bailSeconds = 1.6f;
 
+        [Header("Learning it")]
+        [Tooltip("Landed stunts before the prompt stops teaching (slower, wider window, written instruction).")]
+        [SerializeField] int lessonsNeeded = 2;
+        [SerializeField] float lessonSlow = 1.6f;
+        [SerializeField] float lessonWindow = 1.35f;
+
         [Header("HUD")]
         [SerializeField] CanvasGroup landGroup;
         [SerializeField] Image targetDiamond;
         [SerializeField] Image closingDiamond;
         [SerializeField] TMP_Text trickText;
         [SerializeField] TMP_Text keyText;
+        [SerializeField] Image fillDiamond;
+        [SerializeField] TMP_Text nowText;
+        [SerializeField] TMP_Text coachText;
         [SerializeField] Color accent = new Color32(255, 64, 217, 255);
         [SerializeField] Color green = new Color32(61, 255, 138, 255);
 
@@ -92,7 +101,11 @@ namespace ShiftRush.Stunts
         InputAction pressAction;
         State state = State.Ground;
         float airTime, promptT, trickT, nextPromptAt, flashUntil, baseFixed, bailUntil, nextFind, settling, arriveTilt, total;
-        bool slowed, chainOver, allPerfect, perfect;
+        bool slowed, chainOver, allPerfect, perfect, lesson;
+        int beats;
+        float helpUntil;
+        string help = "";
+        const string LessonKey = "BR_StuntLessons";
         int chain;
         Trick current;
         Quaternion trickStart;
@@ -160,13 +173,15 @@ namespace ShiftRush.Stunts
 
                 case State.Prompt:
                     promptT += Time.unscaledDeltaTime;
+                    Beats();
                     float miss = Mathf.Abs(PromptScale() - 1f), shiftWindow = Difficulty.Current.shiftWindow;
                     if (pressAction != null && pressAction.WasPressedThisFrame())
                     {
-                        if (miss <= window * shiftWindow) StartTrick(miss <= perfectBand * shiftWindow);
-                        else Miss("TOO EARLY");
+                        if (miss <= Window) StartTrick(miss <= perfectBand * shiftWindow * (lesson ? lessonWindow : 1f));
+                        else if (PromptScale() > 1f) Miss("TOO EARLY");
+                        else Miss("TOO LATE");
                     }
-                    else if (promptT >= promptSeconds) Miss("MISSED");
+                    else if (promptT >= PromptLen) Miss("TOO LATE");
                     break;
             }
         }
@@ -191,8 +206,25 @@ namespace ShiftRush.Stunts
 
         // ---- the cycle
 
+        /// <summary>Three rising ticks leading in, then a ding exactly when the diamond fills the target.</summary>
+        void Beats()
+        {
+            float k = promptT / PromptLen, at = PerfectAt;
+            const float gap = 0.13f;
+            while (beats < 4)
+            {
+                float when = at - gap * (3 - beats);
+                if (k < when) break;
+                if (beats < 3) GameSfx.Play(Sfx.CountTick, 1f + 0.12f * beats, 0.75f);
+                else GameSfx.Play(Sfx.CountGo, 1.2f, 0.8f);
+                beats++;
+            }
+        }
+
         void StartPrompt()
         {
+            lesson = GameSettings.Tutorial && PlayerPrefs.GetInt(LessonKey, 0) < lessonsNeeded; // first-timers only
+            beats = 0;
             state = State.Prompt;
             promptT = 0f;
             SetSlow(true);
@@ -202,6 +234,8 @@ namespace ShiftRush.Stunts
         void StartTrick(bool isPerfect)
         {
             SetSlow(false);
+            if (lesson) { PlayerPrefs.SetInt(LessonKey, PlayerPrefs.GetInt(LessonKey, 0) + 1); PlayerPrefs.Save(); }
+            helpUntil = 0f;
             var pick = Pick(TimeToImpact() - landMargin, true);
             if (!pick.HasValue) { state = State.Free; chainOver = true; return; }
             current = pick.Value;
@@ -232,6 +266,8 @@ namespace ShiftRush.Stunts
             chainOver = true;
             state = State.Free;
             Flash(chain > 0 ? names[names.Count - 1] : "", why);
+            help = why == "TOO EARLY" ? "WAIT FOR THE DIAMOND TO TURN GREEN" : "HIT IT AS THE DIAMOND FILLS THE TARGET";
+            helpUntil = Time.unscaledTime + 1.8f;
             GameSfx.Play(Sfx.ShiftMiss, 1f, 0.7f);
         }
 
@@ -280,9 +316,13 @@ namespace ShiftRush.Stunts
             return fits[i];
         }
 
-        // Game seconds a full prompt takes (it runs in slow motion).
-        float PromptGameSeconds() { return promptSeconds * slowMotion; }
-        float PromptScale() { return Mathf.Lerp(startScale, endScale, promptT / promptSeconds); }
+        // Real seconds the prompt runs (longer while still learning), and game seconds (it runs in slow motion).
+        float PromptLen { get { return promptSeconds * (lesson ? lessonSlow : 1f); } }
+        float PromptGameSeconds() { return PromptLen * slowMotion; }
+        float PromptScale() { return Mathf.Lerp(startScale, endScale, promptT / PromptLen); }
+        float Window { get { return window * Difficulty.Current.shiftWindow * (lesson ? lessonWindow : 1f); } }
+        // Share of the prompt at which the closing diamond exactly fills the target (the perfect moment).
+        float PerfectAt { get { return (startScale - 1f) / (startScale - endScale); } }
 
         // ---- the bike in the air
 
@@ -367,14 +407,43 @@ namespace ShiftRush.Stunts
         {
             if (landGroup == null) return;
             bool prompt = state == State.Prompt;
-            bool on = prompt || state == State.Trick || Time.unscaledTime < flashUntil;
+            bool helping = Time.unscaledTime < helpUntil;
+            bool on = prompt || state == State.Trick || Time.unscaledTime < flashUntil || helping;
             landGroup.alpha = Mathf.MoveTowards(landGroup.alpha, on ? 1f : 0f, Time.unscaledDeltaTime * (on ? 12f : 5f));
             if (closingDiamond != null) closingDiamond.enabled = prompt;
             if (targetDiamond != null) targetDiamond.enabled = prompt;
+            if (fillDiamond != null) fillDiamond.enabled = prompt;
+            if (nowText != null) nowText.enabled = prompt;
+            if (coachText != null)
+            {
+                coachText.text = prompt && lesson ? "WATCH THE DIAMOND  //  HIT SHIFT WHEN IT FILLS THE TARGET" : helping ? help : "";
+                coachText.color = prompt && lesson ? Color.white : new Color(1f, 0.62f, 0.66f);
+                var tape = coachText.transform.parent as RectTransform;
+                if (tape != null && landGroup != null && tape != landGroup.transform)
+                {
+                    bool show = coachText.text.Length > 0;
+                    if (tape.gameObject.activeSelf != show) tape.gameObject.SetActive(show);
+                    if (show) tape.sizeDelta = new Vector2(coachText.preferredWidth + 80f, tape.sizeDelta.y);
+                }
+            }
             if (!prompt) return;
 
             float scale = PromptScale();
-            bool inside = Mathf.Abs(scale - 1f) <= window * Difficulty.Current.shiftWindow;
+            float off = Mathf.Abs(scale - 1f);
+            bool inside = off <= Window;
+            // The one cue: the target fills up as the diamond closes in, and turns green in the window.
+            if (fillDiamond != null)
+            {
+                float near = Mathf.Clamp01(1f - off / (Window * 3f));
+                fillDiamond.color = inside ? new Color(green.r, green.g, green.b, 0.85f) : new Color(1f, 1f, 1f, 0.35f * near);
+                fillDiamond.rectTransform.localScale = Vector3.one * (inside ? 1f : Mathf.Lerp(0.2f, 0.9f, near));
+            }
+            if (nowText != null)
+            {
+                nowText.text = inside ? "NOW!" : "";
+                nowText.color = green;
+                nowText.rectTransform.localScale = Vector3.one * (1f + 0.15f * Mathf.Sin(Time.unscaledTime * 30f));
+            }
             if (closingDiamond != null)
             {
                 closingDiamond.rectTransform.localScale = Vector3.one * scale;

@@ -57,7 +57,7 @@ namespace ShiftRush.EditorTools
             var credits = MakeCreditsPreset();
             MakeLoadingScreen();
             MakePauseMenu(sounds);
-            MakeRaceHud(sounds);
+            MakeRaceHudRough(sounds); // the trail-zine look; MakeRaceHud is the old clean one
             MakeShiftHud(sounds);
             MakeCoach();
             MakeRushHud();
@@ -122,15 +122,23 @@ namespace ShiftRush.EditorTools
             fontMedium = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(f + "Medium SDF.asset");
             fontRegular = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(f + "Regular SDF.asset");
             fontLight = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(f + "Light SDF.asset");
+            // The trail-zine look: titles and big numbers in the stencil face, screen headers in the distressed one
+            // (see Header), everything small stays Roboto Condensed so it reads. fontNumber keeps the clean italic
+            // for digits that change every frame (speed, race times).
+            fontNumber = fontTitle;
+            LoadRoughFonts();
+            if (fontStencil != null) fontTitle = fontStencil;
         }
 
         /// <summary>Slanted (italic) shapes drawn in code so the look is ours and needs no paid art.</summary>
         static void MakeArt()
         {
             Directory.CreateDirectory(UIArt);
-            slant = SaveSprite("T_Slant", 160, 64, (x, y, w, h) => Parallelogram(x, y, w, h, 22f, 0f), new Vector4(26, 0, 26, 0));
-            slantFrame = SaveSprite("T_SlantFrame", 160, 96, (x, y, w, h) => Parallelogram(x, y, w, h, 22f, 3f), new Vector4(28, 6, 28, 6));
-            chevron = SaveSprite("T_Chevron", 64, 96, Chevron, Vector4.zero);
+            // Rough versions of the three shapes everything is built from: gaffer tape (was a slanted bar), a
+            // marker-drawn box (was a slanted frame) and a marker chevron. Same sizes and slicing as before.
+            slant = SaveSprite("T_Slant", 160, 64, GafferTape, new Vector4(26, 0, 26, 0));
+            slantFrame = SaveSprite("T_SlantFrame", 160, 96, MarkerBox, new Vector4(28, 8, 28, 8));
+            chevron = SaveSprite("T_Chevron", 64, 96, MarkerChevron, Vector4.zero);
             fadeLeft = SaveSprite("T_FadeLeft", 256, 4, (x, y, w, h) => Mathf.SmoothStep(1f, 0f, x / w), Vector4.zero);
             // Mask for the track hero art: a wide slanted band whose edges melt away.
             softBand = SaveSprite("T_SoftBand", 512, 256, (x, y, w, h) =>
@@ -167,6 +175,37 @@ namespace ShiftRush.EditorTools
             if (outline <= 0f) return inside;
             float inner = Mathf.Clamp01(d - outline + 0.5f);
             return inside - inner;
+        }
+
+        static float GafferTape(float x, float y, float w, float h)
+        {
+            float tl = Mathf.Abs(Mathf.Repeat(y / 6f, 2f) - 1f), tr = Mathf.Abs(Mathf.Repeat(y / 5f + 0.5f, 2f) - 1f);
+            float left = 2f + 9f * tl + 3f * Mathf.PerlinNoise(y * 0.3f, 1f);
+            float right = w - 2f - 9f * tr - 3f * Mathf.PerlinNoise(y * 0.3f, 4f);
+            float top = h - 1.5f - 1.6f * Mathf.PerlinNoise(x * 0.09f, 7f), bottom = 1.5f + 1.6f * Mathf.PerlinNoise(x * 0.09f, 9f);
+            float d = Mathf.Min(x - left, right - x, y - bottom, top - y);
+            float fibre = 0.9f + 0.1f * Mathf.PerlinNoise(x * 0.04f, y * 0.8f);
+            return Mathf.Clamp01(d + 0.5f) * fibre;
+        }
+
+        static float MarkerBox(float x, float y, float w, float h)
+        {
+            // Four strokes that don't quite meet, each a little wobbly, the way a marker box gets drawn.
+            float t = 3.4f;
+            float l = 7f + 2.2f * Mathf.PerlinNoise(y * 0.05f, 2f), r = w - 7f - 2.2f * Mathf.PerlinNoise(y * 0.05f, 5f);
+            float b = 6f + 1.8f * Mathf.PerlinNoise(x * 0.04f, 8f), tp = h - 6f - 1.8f * Mathf.PerlinNoise(x * 0.04f, 11f);
+            float a = 0f;
+            if (y > b - 3f && y < tp + 4f) a = Mathf.Max(a, Mathf.Clamp01(t * 0.5f - Mathf.Abs(x - l) + 0.5f), Mathf.Clamp01(t * 0.5f - Mathf.Abs(x - r) + 0.5f));
+            if (x > l - 5f && x < r + 3f) a = Mathf.Max(a, Mathf.Clamp01(t * 0.5f - Mathf.Abs(y - b) + 0.5f), Mathf.Clamp01(t * 0.5f - Mathf.Abs(y - tp) + 0.5f));
+            return a * (0.82f + 0.18f * Mathf.PerlinNoise(x * 0.2f, y * 0.2f));
+        }
+
+        static float MarkerChevron(float x, float y, float w, float h)
+        {
+            float cy = h * 0.5f;
+            if (Mathf.Abs(y - cy) > h * 0.42f) return 0f;
+            float target = 12f + (w - 24f) * (1f - Mathf.Abs(y - cy) / (h * 0.42f)) + 2f * Mathf.PerlinNoise(y * 0.15f, 3f);
+            return Mathf.Clamp01(5.5f - Mathf.Abs(x - target) + 0.5f) * (0.85f + 0.15f * Mathf.PerlinNoise(x * 0.3f, y * 0.3f));
         }
 
         static float Chevron(float x, float y, float w, float h)
@@ -1010,7 +1049,8 @@ namespace ShiftRush.EditorTools
 
         static void Header(Transform content, string title, string step)
         {
-            var t = Txt(content, "Header", title, fontTitle, 96, Color.white, TextAlignmentOptions.Left);
+            var t = Txt(content, "Header", title, fontDirt != null ? fontDirt : fontTitle, 96, Color.white, TextAlignmentOptions.Left);
+            t.textWrappingMode = TextWrappingModes.NoWrap;
             Place(t.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), new Vector2(120, -96), new Vector2(900, 120));
             var stripe = Img(content, "Header Stripe", slant, Magenta);
             stripe.type = Image.Type.Sliced;

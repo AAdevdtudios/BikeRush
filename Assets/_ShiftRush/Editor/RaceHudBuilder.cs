@@ -20,7 +20,7 @@ namespace ShiftRush.EditorTools
         {
             LoadFonts();
             MakeArt();
-            MakeRaceHud(LoadSounds());
+            MakeRaceHudRough(LoadSounds()); // the trail-zine look; MakeRaceHud is the old clean one
             AssetDatabase.SaveAssets();
             Debug.Log("[SHIFT//RUSH] Race HUD built: " + HudPath);
         }

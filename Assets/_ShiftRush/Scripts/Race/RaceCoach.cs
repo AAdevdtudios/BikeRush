@@ -1,6 +1,6 @@
+using ShiftRush.AirShow;
 using ShiftRush.Audio;
 using ShiftRush.Core;
-using ShiftRush.Shift;
 using ShiftRush.UI;
 using ShiftRush.Vehicles;
 using TMPro;
@@ -11,24 +11,24 @@ using UnityEngine.UI;
 namespace ShiftRush.Race
 {
     /// <summary>
-    /// The tutorial: a coach card along the bottom of the screen in the player's first races (Resources/SR_Coach,
-    /// built with the menu). No tutorial level. Each lesson shows up at the moment it matters and clears when the
-    /// player actually does it:
-    ///  1. DRIVE: during the countdown, with the player's own keys (or what auto accelerate leaves them to do).
-    ///  2. RAMP: as a SHIFT ramp comes up, its distance counting down on the key cap.
-    ///  3. TIMING: in the slow motion. The cap flashes NOW while the diamonds meet, and the timing is gentler until
-    ///     the player lands a SHIFT (<see cref="AssistShift"/>).
-    ///  4. WORLD: what to do in Ring Rush or Trap Run.
-    ///  5. NITRO: once nitro has been earned, until it's been used.
-    /// A "stuck? press R" card comes up when needed. It's for first-timers: it switches itself off (Settings → Gameplay
-    /// → Tutorial) after the first race, or as soon as all five are done; switching it back on replays it.
+    /// The tutorial for first-timers: a coach card along the bottom of the screen (Resources/SR_Coach, built with the
+    /// menu). No tutorial level; each lesson shows up when it matters and clears when the player does it. Every mode
+    /// has its own short list, taught once:
+    /// <list type="bullet">
+    /// <item>PACK RACE: pedal, boost, boost pads.</item>
+    /// <item>GHOST RUN: pedal, reading the ghost gap, boost.</item>
+    /// <item>AIR SHOW: pedal, fly through the boxes (the stunt timing itself is taught by
+    /// <see cref="Stunts.StuntDirector"/>'s own lesson).</item>
+    /// </list>
+    /// A mode's lessons are saved as they're done and the mode counts as learnt after its first finished run, so nobody
+    /// sees them twice. A "stuck? press R" tip can still show. Settings → Gameplay → Tutorial off silences it all;
+    /// switching it back on replays every mode's lessons.
     /// </summary>
     public class RaceCoach : MonoBehaviour
     {
-        enum Lesson { Drive, Ramp, Timing, World, Nitro, Stuck, Missed, Done, None }
-        const int Counted = 5;
-        const int AllDone = (1 << Counted) - 1;
-        const string ProgressKey = "SR_TutorialProgress";
+        enum Lesson { Pedal, Boost, Pads, Ghost, Boxes, Stuck, Done, None }
+
+        const string KeyPrefix = "BR_Tutorial_", SwitchMemo = "BR_TutorialSwitchWas";
 
         [SerializeField] CanvasGroup group;
         [SerializeField] RectTransform card;
@@ -37,22 +37,22 @@ namespace ShiftRush.Race
         [SerializeField] Image[] pips;
         [SerializeField] Color accent = new Color32(255, 64, 217, 255);
         [SerializeField] Color green = new Color32(61, 255, 138, 255);
-        [Tooltip("Metres before a SHIFT ramp that the ramp lesson comes up.")]
-        [SerializeField] float rampWarning = 240f;
+        [Tooltip("Metres ahead a boost pad has to be for the pads lesson to come up.")]
+        [SerializeField] float padWarning = 70f;
 
-        /// <summary>True until the player has landed their first SHIFT with the tutorial on: the timing is gentler.</summary>
-        public static bool AssistShift { get; private set; }
+        /// <summary>Kept for the old SHIFT ramps: never on in BIKE//RUSH.</summary>
+        public static bool AssistShift { get { return false; } }
 
         RaceManager race;
+        AirShowRun show;
+        IVehicle vehicle;
         IVehicleDash dash;
-        int progress;
+        RideMode mode;
+        Lesson[] lessons;
+        int progress;            // a bit per lesson index in `lessons`
         bool active;
         Lesson showing = Lesson.None;
-        float shownAt, clearAt = -1f, cleared, appear, slowTime, nitroHeld, nitroReadyAt = -1f, hideAt = -1f;
-        float[] rampDistances;
-        ShiftArena arena;
-        bool missedPending;
-        float racedSeconds; // counted here: on leaving the scene the race may already be gone
+        float shownAt, clearAt = -1f, cleared, appear, slowTime, boostHeld, ridden, hideAt = -1f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Hook()
@@ -63,8 +63,8 @@ namespace ShiftRush.Race
 
         static void Spawn(Scene scene)
         {
-            AssistShift = false;
-            if (FindFirstObjectByType<RaceCoach>() != null || FindFirstObjectByType<RaceLine>() == null) return;
+            if (FindFirstObjectByType<RaceCoach>() != null) return;
+            if (FindFirstObjectByType<RaceLine>() == null && FindFirstObjectByType<AirShowRun>() == null) return;
             var prefab = Resources.Load<RaceCoach>("SR_Coach");
             if (prefab == null) return;
             var coach = Instantiate(prefab);
@@ -77,135 +77,106 @@ namespace ShiftRush.Race
             if (group != null) { group.alpha = 0f; group.blocksRaycasts = false; group.interactable = false; }
         }
 
-        void OnEnable()
-        {
-            ShiftDirector.TimingStarted += OnTimingStarted;
-            ShiftDirector.TimingEnded += OnTimingEnded;
-            ShiftDirector.Warped += OnWarped;
-            ShiftDirector.Returned += OnReturned;
-            ShiftDirector.NitroAwarded += OnNitro;
-            VehicleReset.Respawned += OnRespawned;
-        }
-
-        void OnDisable()
-        {
-            // Left the first race part-way (restart, back to menu): it still counts once they've really raced.
-            if (racedSeconds > 30f) EndTutorial();
-            ShiftDirector.TimingStarted -= OnTimingStarted;
-            ShiftDirector.TimingEnded -= OnTimingEnded;
-            ShiftDirector.Warped -= OnWarped;
-            ShiftDirector.Returned -= OnReturned;
-            ShiftDirector.NitroAwarded -= OnNitro;
-            VehicleReset.Respawned -= OnRespawned;
-            AssistShift = false;
-        }
+        void OnEnable() { BoostPad.Hit += OnPad; VehicleReset.Respawned += OnRespawned; }
+        void OnDisable() { BoostPad.Hit -= OnPad; VehicleReset.Respawned -= OnRespawned; }
 
         void Start()
         {
-            active = GameSettings.Tutorial;
-            progress = PlayerPrefs.GetInt(ProgressKey, 0);
-            if (active && progress == AllDone) { progress = 0; PlayerPrefs.SetInt(ProgressKey, 0); } // switched back on: replay
-            AssistShift = active && !IsDone(Lesson.Timing);
+            show = FindFirstObjectByType<AirShowRun>();
+            mode = show != null ? RideMode.AirShow : RaceSession.Mode == RideMode.GhostRun ? RideMode.GhostRun : RideMode.PackRace;
+            lessons = mode == RideMode.AirShow ? new[] { Lesson.Pedal, Lesson.Boxes }
+                    : mode == RideMode.GhostRun ? new[] { Lesson.Pedal, Lesson.Ghost, Lesson.Boost }
+                    : new[] { Lesson.Pedal, Lesson.Boost, Lesson.Pads };
+            CheckSwitch();
+            progress = PlayerPrefs.GetInt(ModeKey, 0);
+            active = GameSettings.Tutorial && !Learnt;
+            RefreshPips();
+        }
+
+        string ModeKey { get { return KeyPrefix + mode; } }
+        int AllBits { get { return (1 << lessons.Length) - 1; } }
+        bool Learnt { get { return progress == AllBits || PlayerPrefs.GetInt(ModeKey + "_Learnt", 0) == 1; } }
+
+        /// <summary>Tutorial switched back on (it was off): every mode's lessons come back, the stunt lesson too.</summary>
+        void CheckSwitch()
+        {
+            int now = GameSettings.Tutorial ? 1 : 0;
+            int was = PlayerPrefs.GetInt(SwitchMemo, 1);
+            if (now == 1 && was == 0)
+            {
+                foreach (RideMode m in System.Enum.GetValues(typeof(RideMode)))
+                {
+                    PlayerPrefs.DeleteKey(KeyPrefix + m);
+                    PlayerPrefs.DeleteKey(KeyPrefix + m + "_Learnt");
+                }
+                PlayerPrefs.DeleteKey("BR_StuntLessons");
+            }
+            PlayerPrefs.SetInt(SwitchMemo, now);
+        }
+
+        int IndexOf(Lesson l) { for (int i = 0; i < lessons.Length; i++) if (lessons[i] == l) return i; return -1; }
+        bool Counted(Lesson l) { return IndexOf(l) >= 0; }
+        bool IsDone(Lesson l) { int i = IndexOf(l); return i < 0 || (progress & (1 << i)) != 0; }
+        int DoneCount { get { int n = 0; for (int i = 0; i < lessons.Length; i++) if ((progress & (1 << i)) != 0) n++; return n; } }
+
+        // ------------------------------------------------------------------ events
+
+        void OnPad(BikeVehicleAdapter bike, BoostPad pad)
+        {
+            if (!active || bike == null || bike.IsAIDriven) return;
+            Complete(Lesson.Pads);
+        }
+
+        void OnRespawned(VehicleReset r)
+        {
+            if (showing == Lesson.Stuck) Hide();
+            slowTime = 0f;
+        }
+
+        // ------------------------------------------------------------------ the run, whichever mode
+
+        bool Riding { get { return race != null ? race.CurrentState == RaceManager.State.Racing : show != null && show.CurrentState == AirShowRun.State.Riding; } }
+        bool Over { get { return race != null ? race.CurrentState == RaceManager.State.Finished : show != null && show.CurrentState == AirShowRun.State.Finished; } }
+
+        void Update()
+        {
+            float dt = Time.unscaledDeltaTime;
+            if (race == null && RaceManager.Current != null) race = RaceManager.Current;
+            if (vehicle == null)
+            {
+                if (race != null && race.Player != null) vehicle = race.Player.vehicle;
+                else if (show != null && show.Bike != null) vehicle = show.Bike;
+                dash = vehicle as IVehicleDash;
+            }
+            if (PauseMenu.IsPaused && lessons != null) FollowSetting(); // the pause menu has the switch too
+            if (hideAt > 0f && Time.unscaledTime >= hideAt) { hideAt = -1f; Hide(); }
+            if (vehicle != null && lessons != null) Think();
+            Animate(dt);
         }
 
         void FollowSetting()
         {
             bool want = GameSettings.Tutorial;
-            if (want == active) return;
-            active = want;
-            if (want && progress == AllDone) { progress = 0; PlayerPrefs.SetInt(ProgressKey, 0); }
-            if (!want) Hide();
-            AssistShift = active && !IsDone(Lesson.Timing);
+            if (!want) { if (active) { active = false; Hide(); } PlayerPrefs.SetInt(SwitchMemo, 0); return; }
+            if (active) return;
+            CheckSwitch();
+            progress = PlayerPrefs.GetInt(ModeKey, 0);
+            active = !Learnt;
             RefreshPips();
-        }
-
-        bool IsDone(Lesson l) { return (progress & (1 << (int)l)) != 0; }
-
-        int DoneCount
-        {
-            get { int n = 0; for (int i = 0; i < Counted; i++) if ((progress & (1 << i)) != 0) n++; return n; }
-        }
-
-        // ------------------------------------------------------------------ SHIFT events
-
-        void OnTimingStarted()
-        {
-            if (!active) return;
-            Complete(Lesson.Ramp);
-            missedPending = false;
-            if (!IsDone(Lesson.Timing)) Show(Lesson.Timing);
-            else if (showing != Lesson.Done) Hide();
-        }
-
-        void OnTimingEnded()
-        {
-            if (!active || showing != Lesson.Timing) return;
-            missedPending = true; // Warped follows straight away on a hit; if it doesn't, it was a miss
-        }
-
-        void OnWarped()
-        {
-            if (!active) return;
-            missedPending = false;
-            Complete(Lesson.Timing);
-            AssistShift = false;
-            arena = null; // found once the car is in it
-        }
-
-        void OnReturned(IVehicle v)
-        {
-            if (!active) return;
-            if (arena != null) Complete(Lesson.World);
-            arena = null;
-        }
-
-        void OnNitro(float fill)
-        {
-            if (!active || IsDone(Lesson.Nitro)) return;
-            nitroReadyAt = Time.unscaledTime + 2.4f; // after the reward panel has had its moment
-        }
-
-        void OnRespawned(VehicleReset r)
-        {
-            if (showing == Lesson.Stuck) Complete(Lesson.Stuck);
-            slowTime = 0f;
-        }
-
-        // ------------------------------------------------------------------ the lessons
-
-        void Update()
-        {
-            float dt = Time.unscaledDeltaTime;
-            if (race == null && RaceManager.Current != null)
-            {
-                race = RaceManager.Current;
-                if (race.Player != null) dash = race.Player.vehicle as IVehicleDash;
-                CacheRamps();
-            }
-
-            if (PauseMenu.IsPaused && showing != Lesson.Done) FollowSetting(); // the pause menu has the switch too
-            if (hideAt > 0f && Time.unscaledTime >= hideAt) { hideAt = -1f; Hide(); }
-            if (race != null && race.CurrentState == RaceManager.State.Racing) racedSeconds += Time.deltaTime;
-            if (active && race != null && race.Player != null) Think();
-            Animate(dt);
         }
 
         void Think()
         {
-            var p = race.Player;
-            if (dash == null) dash = p.vehicle as IVehicleDash;
-            var shift = ShiftDirector.Instance;
-            var shiftState = shift != null ? shift.CurrentState : ShiftDirector.State.Idle;
-            float speed = Mathf.Abs(p.vehicle.SpeedKmh);
-
-            if (race.CurrentState == RaceManager.State.Finished || p.finished)
+            float speed = Mathf.Abs(vehicle.SpeedKmh);
+            if (Over)
             {
                 if (showing != Lesson.None && showing != Lesson.Done) Hide();
-                EndTutorial(); // first-timers only: one race and it's done
+                Learn(); // one finished run and this mode is learnt
                 return;
             }
+            if (!active) return;
+            if (Riding) ridden += Time.deltaTime;
 
-            // A lesson waiting to clear (green flash), or the sign-off running its time.
             if (clearAt > 0f)
             {
                 if (Time.unscaledTime >= clearAt) { clearAt = -1f; if (showing != Lesson.Done) Hide(); }
@@ -213,80 +184,62 @@ namespace ShiftRush.Race
             }
             switch (showing)
             {
-                case Lesson.Drive:
-                    if (race.CurrentState == RaceManager.State.Racing && speed > 70f) Complete(Lesson.Drive);
+                case Lesson.Pedal:
+                    if (Riding && speed > 25f) Complete(Lesson.Pedal);
                     return;
-                case Lesson.Ramp:
-                {
-                    float ahead = RampAhead(p);
-                    if (shiftState == ShiftDirector.State.Idle && ahead > rampWarning + 30f) Hide(); // drove past it
-                    else if (keyText != null) keyText.text = Mathf.Max(0, Mathf.RoundToInt(ahead / 10f) * 10) + "M";
+                case Lesson.Boost:
+                    if (dash != null && dash.NitroActive) boostHeld += Time.unscaledDeltaTime;
+                    if (boostHeld > 0.5f) Complete(Lesson.Boost);
                     return;
-                }
-                case Lesson.Timing:
-                {
-                    bool now = shift != null && shift.InWindow;
-                    if (headline != null) headline.text = now ? "<color=#3DFF8A>NOW!</color>  PRESS SHIFT" : "PRESS SHIFT AS THE DIAMONDS MEET";
-                    if (keyCap != null) keyCap.color = now ? green : new Color(1f, 1f, 1f, 0.1f);
-                    if (keyText != null) keyText.color = now ? Color.black : Color.white;
-                    if (missedPending && shiftState == ShiftDirector.State.Idle) { missedPending = false; Show(Lesson.Missed); hideAt = Time.unscaledTime + 4.5f; }
+                case Lesson.Pads:
+                    if (Time.unscaledTime - shownAt > 8f) Hide(); // rode past: it comes back at the next one
                     return;
-                }
-                case Lesson.World:
-                    return; // cleared when the car comes back
-                case Lesson.Nitro:
-                    if (dash != null && dash.NitroActive) nitroHeld += Time.unscaledDeltaTime;
-                    if (nitroHeld > 0.5f) Complete(Lesson.Nitro);
+                case Lesson.Ghost:
+                    if (Time.unscaledTime - shownAt > 7f) Complete(Lesson.Ghost);
+                    return;
+                case Lesson.Boxes:
+                    if (TrickBox.PlayerInside) Complete(Lesson.Boxes);
                     return;
                 case Lesson.Stuck:
-                    if (speed > 30f) Hide();
-                    return;
-                case Lesson.Missed:
-                    if (shiftState == ShiftDirector.State.Idle && RampAhead(p) < rampWarning && Time.unscaledTime - shownAt > 2f) Show(Lesson.Ramp);
+                    if (speed > 20f) Hide();
                     return;
                 case Lesson.Done:
                     return;
             }
 
-            // Nothing on screen: what's next?
-            if (race.CurrentState == RaceManager.State.Countdown)
-            {
-                if (!IsDone(Lesson.Drive)) Show(Lesson.Drive);
-                return;
-            }
-            if (!IsDone(Lesson.Drive)) { Show(Lesson.Drive); return; }
+            // Nothing showing: what's next?
+            if (!IsDone(Lesson.Pedal)) { Show(Lesson.Pedal); return; }
+            if (!Riding) return;
+            if (!IsDone(Lesson.Ghost) && ridden > 1.5f) { Show(Lesson.Ghost); return; }
+            if (!IsDone(Lesson.Boxes) && ridden > 0.5f) { Show(Lesson.Boxes); return; }
+            if (!IsDone(Lesson.Pads) && PadAhead()) { Show(Lesson.Pads); return; }
+            if (!IsDone(Lesson.Boost) && ridden > 6f && dash != null && dash.Nitro01 > 0.3f && vehicle.AnyWheelGrounded) { Show(Lesson.Boost); return; }
 
-            if (shiftState == ShiftDirector.State.Away)
-            {
-                if (arena == null) arena = ActiveArena();
-                if (arena != null && !IsDone(Lesson.World)) Show(Lesson.World);
-                return;
-            }
-            if (shiftState != ShiftDirector.State.Idle) return;
+            // Stuck: barely moving for a few seconds while riding (scaled time, so the pause doesn't count).
+            slowTime = !PauseMenu.IsPaused && speed < 5f ? slowTime + Time.deltaTime : 0f;
+            if (slowTime > 3.5f || (race != null && race.WrongWay && race.Player.wrongWayTime > 4f)) { slowTime = 0f; Show(Lesson.Stuck); }
+        }
 
-            if (!IsDone(Lesson.Nitro) && nitroReadyAt > 0f && Time.unscaledTime >= nitroReadyAt && dash != null && dash.Nitro01 > 0.05f)
+        bool PadAhead()
+        {
+            var t = vehicle.Transform;
+            foreach (var pad in BoostPad.All)
             {
-                Show(Lesson.Nitro);
-                return;
+                if (pad == null) continue;
+                Vector3 to = pad.transform.position - t.position;
+                float ahead = Vector3.Dot(to, t.forward);
+                if (ahead > 10f && ahead < padWarning && Vector3.ProjectOnPlane(to, t.forward).magnitude < 12f) return true;
             }
-            if ((!IsDone(Lesson.Ramp) || !IsDone(Lesson.Timing)) && RampAhead(p) < rampWarning)
-            {
-                Show(Lesson.Ramp);
-                return;
-            }
-
-            // Stuck: barely moving for a few seconds while the race is on (scaled time, so the pause doesn't count).
-            bool controllable = !p.suspended && !PauseMenu.IsPaused;
-            slowTime = controllable && speed < 8f ? slowTime + Time.deltaTime : 0f;
-            if (slowTime > 3.5f || race.WrongWay && p.wrongWayTime > 4f) { slowTime = 0f; Show(Lesson.Stuck); }
+            return false;
         }
 
         void Complete(Lesson l)
         {
-            if ((int)l < Counted && !IsDone(l))
+            int i = IndexOf(l);
+            if (i >= 0 && (progress & (1 << i)) == 0)
             {
-                progress |= 1 << (int)l;
-                PlayerPrefs.SetInt(ProgressKey, progress);
+                progress |= 1 << i;
+                PlayerPrefs.SetInt(ModeKey, progress);
                 PlayerPrefs.Save();
             }
             if (showing != l) return;
@@ -296,30 +249,26 @@ namespace ShiftRush.Race
             if (keyText != null) { keyText.text = "OK"; keyText.color = Color.black; }
             RefreshPips();
             GameSfx.Play(Sfx.RingPass, 1.4983f, 0.8f);
-            if (progress == AllDone) Invoke(nameof(SignOff), 1.1f);
+            if (progress == AllBits) Invoke(nameof(SignOff), 1.1f);
         }
 
         void SignOff()
         {
             clearAt = -1f;
             Show(Lesson.Done);
-            hideAt = Time.unscaledTime + 6f;
-            EndTutorial(); // the card stays up until hideAt, then this race is hint-free
+            hideAt = Time.unscaledTime + 5f;
+            Learn();
             GameSfx.Play(Sfx.BestLap, 1f, 0.8f);
         }
 
-        /// <summary>
-        /// The tutorial is for first-timers: after one race (or all five lessons) it switches itself off. Switching it
-        /// back on in Settings replays every lesson.
-        /// </summary>
-        void EndTutorial()
+        /// <summary>This mode is learnt: its lessons never show again (unless the Tutorial switch is turned back on).</summary>
+        void Learn()
         {
             if (!active) return;
             active = false;
-            AssistShift = false;
-            progress = AllDone;
-            PlayerPrefs.SetInt(ProgressKey, AllDone);
-            PlayerPrefs.SetString("Switch_" + GameSettings.TutorialKey, "false");
+            progress = AllBits;
+            PlayerPrefs.SetInt(ModeKey, AllBits);
+            PlayerPrefs.SetInt(ModeKey + "_Learnt", 1);
             PlayerPrefs.Save();
         }
 
@@ -327,14 +276,14 @@ namespace ShiftRush.Race
 
         void Show(Lesson l)
         {
-            if (showing == l && l != Lesson.Missed) return;
+            if (showing == l) return;
             showing = l;
             shownAt = Time.unscaledTime;
             appear = 0f;
             cleared = 0f;
             clearAt = -1f;
-            hideAt = -1f;
-            if (l == Lesson.Nitro) nitroHeld = 0f;
+            hideAt = l == Lesson.Stuck ? Time.unscaledTime + 6f : -1f;
+            if (l == Lesson.Boost) boostHeld = 0f;
             if (keyCap != null) keyCap.color = new Color(1f, 1f, 1f, 0.1f);
             if (keyText != null) keyText.color = Color.white;
 
@@ -345,13 +294,13 @@ namespace ShiftRush.Race
             if (detail != null) detail.text = body;
             if (tagText != null)
             {
-                int step = (int)l < Counted ? DoneCount + 1 : DoneCount;
-                tagText.text = l == Lesson.Done ? "TUTORIAL  //  COMPLETE"
-                    : (int)l < Counted ? "TUTORIAL  //  " + step.ToString("00") + " / " + Counted.ToString("00")
-                    : "TUTORIAL  //  TIP";
+                string name = RideModes.Get(mode).name;
+                tagText.text = l == Lesson.Done ? name + "  //  YOU'VE GOT IT"
+                    : Counted(l) ? name + "  //  " + (DoneCount + 1).ToString("00") + " / " + lessons.Length.ToString("00")
+                    : name + "  //  TIP";
             }
             RefreshPips();
-            if (l != Lesson.Timing) GameSfx.Play(Sfx.Overtake, 0.75f, 1.4f);
+            GameSfx.Play(Sfx.Overtake, 0.75f, 1.4f);
         }
 
         void Hide()
@@ -364,58 +313,39 @@ namespace ShiftRush.Race
         void Words(Lesson l, out string key, out string head, out string body)
         {
             const string M = "<color=#FF40D9>", E = "</color>";
-            string left = Key("Steering", "wasd", "negative", "A"), right = Key("Steering", "wasd", "positive", "D");
-            string brake = Key("Brake", "wasd", "positive", "S"), hand = Key("Handbrake", "keyboard", "positive", "SPACE");
-            string nitro = Key("NOS", "keyboard", "positive", "SHIFT");
+            string pedal = Key("Throttle", "wasd", "positive", "W"), brake = Key("Brake", "wasd", "positive", "S");
+            string hop = Key("Handbrake", "keyboard", "positive", "SPACE"), boost = Key("NOS", "keyboard", "positive", "SHIFT");
             switch (l)
             {
-                case Lesson.Drive:
-                    if (GameSettings.AutoAccelerate)
-                    {
-                        key = "AUTO";
-                        head = "YOUR RIDER PEDALS FOR YOU";
-                        body = M + left + " " + right + E + " pick your line  //  " + M + brake + E + " brakes  //  " + M + hand + E + " hold, let go to hop";
-                    }
-                    else
-                    {
-                        key = Key("Throttle", "wasd", "positive", "W");
-                        head = "HOLD " + key + " TO PEDAL";
-                        body = M + left + " " + right + E + " pick your line, the trail steers  //  " + M + brake + E + " brakes  //  " + M + hand + E + " hold, let go to hop";
-                    }
+                case Lesson.Pedal:
+                    if (GameSettings.AutoAccelerate) { key = "AUTO"; head = "YOUR RIDER PEDALS FOR YOU"; }
+                    else { key = pedal; head = "HOLD " + pedal + " TO PEDAL"; }
+                    body = mode == RideMode.AirShow
+                        ? "The bike rides its own line here: you handle speed and timing.  " + M + brake + E + " brakes  //  " + M + boost + E + " on the ground boosts"
+                        : "The trail steers you round the bends  //  " + M + brake + E + " brakes  //  " + M + hop + E + " hold, let go to hop";
                     return;
-                case Lesson.Ramp:
-                    key = "---";
-                    head = "MAGENTA RAMP AHEAD: HIT IT";
-                    body = "A SHIFT ramp. Take it fast and the world slows down. That's your shot at a shortcut.";
+                case Lesson.Boost:
+                    key = boost;
+                    head = "HOLD " + boost + " TO BOOST";
+                    body = "The bar bottom right is your tank. It refills as you ride, faster with tricks and boost pads.";
                     return;
-                case Lesson.Timing:
-                    key = "SHIFT";
-                    head = "PRESS SHIFT AS THE DIAMONDS MEET";
-                    body = "Land " + M + "2 of 3" + E + " to warp out. The timing's gentler until you land your first.";
+                case Lesson.Pads:
+                    key = ">>>";
+                    head = "RIDE OVER THE ARROWS";
+                    body = "Boost pads fling you forward. Rivals go for them too, so pick your lane early.";
                     return;
-                case Lesson.Missed:
-                    key = "AGAIN";
-                    head = "MISSED. NEXT RAMP, GO AGAIN";
-                    body = "A miss still pays some boost. Watch the magenta diamond and press as it touches the white one.";
+                case Lesson.Ghost:
+                    bool ghost = GhostRun.Current != null && GhostRun.Current.HasGhost;
+                    key = ghost ? "GAP" : "REC";
+                    head = ghost ? "BEAT YOUR GHOST" : "SET A TIME";
+                    body = ghost
+                        ? "Top left is your gap: <color=#0E8FB0>minus</color> means you're ahead, <color=#C8283C>plus</color> behind. Your best run is the see-through rider."
+                        : "No rivals, just the clock. Finish and this run becomes your ghost to chase next time.";
                     return;
-                case Lesson.World:
-                    if (arena != null && arena.kind == ShiftArena.Kind.TrapRun)
-                    {
-                        key = "DODGE";
-                        head = "REACH THE ARCH. DODGE THE TRAPS.";
-                        body = "Every hit costs boost. Make it in time and you come back in the " + M + "top three" + E + ".";
-                    }
-                    else
-                    {
-                        key = "RINGS";
-                        head = "RIDE THROUGH THE RINGS";
-                        body = "More rings, more boost. Reach the arch in time and you come back in the " + M + "top three" + E + ".";
-                    }
-                    return;
-                case Lesson.Nitro:
-                    key = nitro;
-                    head = "BOOST'S READY: HOLD " + nitro;
-                    body = "It refills as you ride, faster with tricks and boost pads. Spend it on the straights.";
+                case Lesson.Boxes:
+                    key = "BOX";
+                    head = "FLY THROUGH THE GLOWING BOXES";
+                    body = "Hit the kickers fast. Inside a box, time slows down and you get a shot at a trick.";
                     return;
                 case Lesson.Stuck:
                     key = "R";
@@ -424,8 +354,8 @@ namespace ShiftRush.Race
                     return;
                 case Lesson.Done:
                     key = "GO";
-                    head = "THAT'S EVERYTHING. GO WIN IT.";
-                    body = "Hints are off now. Turn them back on in Settings  >  Gameplay  >  Tutorial.";
+                    head = "THAT'S IT. GO GET IT.";
+                    body = "No more hints in " + RideModes.Get(mode).name + ". Bring them back in Settings  >  Gameplay  >  Tutorial.";
                     return;
             }
             key = head = body = "";
@@ -439,12 +369,15 @@ namespace ShiftRush.Race
 
         void RefreshPips()
         {
-            if (pips == null) return;
+            if (pips == null || lessons == null) return;
             for (int i = 0; i < pips.Length; i++)
             {
                 if (pips[i] == null) continue;
-                bool done = i < Counted && (progress & (1 << i)) != 0;
-                bool now = i == (int)showing;
+                bool used = i < lessons.Length;
+                pips[i].gameObject.SetActive(used);
+                if (!used) continue;
+                bool done = (progress & (1 << i)) != 0;
+                bool now = lessons[i] == showing;
                 pips[i].color = done ? green : now ? accent : new Color(1f, 1f, 1f, 0.18f);
             }
         }
@@ -460,36 +393,6 @@ namespace ShiftRush.Race
             cleared = Mathf.MoveTowards(cleared, 0f, dt * 1.5f);
             if (frame != null) frame.color = Color.Lerp(accent, green, cleared);
             if (card != null) card.localScale = Vector3.one * (1f + 0.04f * cleared);
-            if (showing == Lesson.Timing && keyCap != null)
-                keyCap.transform.localScale = Vector3.one * (ShiftDirector.Instance != null && ShiftDirector.Instance.InWindow ? 1.12f : 1f);
-            else if (keyCap != null) keyCap.transform.localScale = Vector3.one;
-        }
-
-        // ------------------------------------------------------------------ helpers
-
-        void CacheRamps()
-        {
-            var line = race.Line;
-            var ramps = FindObjectsByType<ShiftRamp>(FindObjectsSortMode.None);
-            if (line == null || line.distances == null) { rampDistances = new float[0]; return; }
-            rampDistances = new float[ramps.Length];
-            for (int i = 0; i < ramps.Length; i++) rampDistances[i] = line.distances[line.Nearest(ramps[i].transform.position)];
-        }
-
-        /// <summary>Metres along the circuit to the next SHIFT ramp ahead of the player.</summary>
-        float RampAhead(RaceManager.Racer p)
-        {
-            if (rampDistances == null || rampDistances.Length == 0 || race.Line == null || p.suspended) return float.MaxValue;
-            float len = race.Line.length, d = race.Line.distances[p.nearest], best = float.MaxValue;
-            foreach (var rd in rampDistances) best = Mathf.Min(best, Mathf.Repeat(rd - d, len));
-            return best;
-        }
-
-        static ShiftArena ActiveArena()
-        {
-            foreach (var a in FindObjectsByType<ShiftArena>(FindObjectsSortMode.None))
-                if (a.isActiveAndEnabled) return a;
-            return null;
         }
     }
 }

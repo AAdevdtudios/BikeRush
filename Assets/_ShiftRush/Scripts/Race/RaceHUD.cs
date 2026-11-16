@@ -66,6 +66,11 @@ namespace ShiftRush.Race
         [Tooltip("Full mode: share of the window the circuit fills.")]
         [SerializeField] float fullFill = 0.86f;
 
+        [Tooltip("Speedometer and boost: faded away under the results.")]
+        [SerializeField] CanvasGroup dashGroup;
+        /// <summary>The speedometer and boost, for screens that take over at the end (Air Show results).</summary>
+        public CanvasGroup Dash { get { return dashGroup; } }
+
         [Header("Results")]
         [SerializeField] CanvasGroup finishGroup;
         [SerializeField] TMP_Text finishPosition, finishTotal, finishBest, finishLaps;
@@ -78,12 +83,15 @@ namespace ShiftRush.Race
         [SerializeField] Color accent = new Color32(255, 64, 217, 255);
         [SerializeField] Color steel = new Color32(154, 160, 180, 255);
 
-        static readonly Color GhostCyan = new Color32(64, 224, 255, 255);
-        const string GhostHex = "#40E0FF", BehindHex = "#FF5A6E";
+        // Deep teal and brick red: they sit on cream paper and kraft card in the trail-zine HUD.
+        static readonly Color GhostCyan = new Color32(14, 143, 176, 255);
+        const string GhostHex = "#0E8FB0", BehindHex = "#C8283C";
 
         RaceManager race;
         IVehicle vehicle;
         TMP_Text posLabel;
+        ShiftRush.UI.StampSequence stamps;
+        float stampStart = -1f;
         RectTransform ghostDot;
         IVehicleDash dash;
         float shownSpeed, countdownPunch, tickTime, messageUntil, finishShownAt = -1f;
@@ -129,10 +137,50 @@ namespace ShiftRush.Race
             if (messageGroup != null) messageGroup.alpha = 0f;
             if (countdownText != null) countdownText.text = "";
             if (countdownRing != null) countdownRing.enabled = false;
+            if (line != null && line.mapSprite == null && line.points != null && line.points.Length > 2) SketchMap(line);
             if (mapImage != null && line != null && line.mapSprite != null) mapImage.sprite = line.mapSprite;
             hasMap = line != null && line.mapSprite != null;
             if (mapView != null) mapView.gameObject.SetActive(hasMap);
             if (positionValue != null) posLabel = Child(positionValue.transform.parent, "Label");
+        }
+
+        /// <summary>
+        /// A trail with no map art gets one drawn from its racing line: a thick white stroke on a square texture
+        /// (tinted by the HUD), with the map bounds the minimap needs to place riders on it.
+        /// </summary>
+        static void SketchMap(RaceLine line)
+        {
+            const int size = 512;
+            float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+            foreach (var p in line.points) { minX = Mathf.Min(minX, p.x); maxX = Mathf.Max(maxX, p.x); minZ = Mathf.Min(minZ, p.z); maxZ = Mathf.Max(maxZ, p.z); }
+            float span = Mathf.Max(maxX - minX, maxZ - minZ) * 1.12f;
+            float cx = (minX + maxX) * 0.5f, cz = (minZ + maxZ) * 0.5f;
+            line.mapBounds = new Rect(cx - span * 0.5f, cz - span * 0.5f, span, span);
+            var alpha = new float[size * size];
+            const float r = 5.5f;
+            for (int i = 0; i < line.points.Length; i++)
+            {
+                Vector2 a = line.MapUV(line.points[i]) * size, b = line.MapUV(line.points[(i + 1) % line.points.Length]) * size;
+                int steps = Mathf.Max(1, Mathf.CeilToInt(Vector2.Distance(a, b) * 2f));
+                for (int k = 0; k <= steps; k++)
+                {
+                    Vector2 c = Vector2.Lerp(a, b, k / (float)steps);
+                    int x0 = Mathf.FloorToInt(c.x - r - 1), x1 = Mathf.CeilToInt(c.x + r + 1), y0 = Mathf.FloorToInt(c.y - r - 1), y1 = Mathf.CeilToInt(c.y + r + 1);
+                    for (int y = Mathf.Max(0, y0); y <= Mathf.Min(size - 1, y1); y++)
+                        for (int x = Mathf.Max(0, x0); x <= Mathf.Min(size - 1, x1); x++)
+                        {
+                            float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), c);
+                            float v = Mathf.Clamp01(r - d + 0.5f);
+                            if (v > alpha[y * size + x]) alpha[y * size + x] = v;
+                        }
+                }
+            }
+            var px = new Color32[size * size];
+            for (int i = 0; i < px.Length; i++) px[i] = new Color32(255, 255, 255, (byte)(alpha[i] * 255));
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "Sketched Map" };
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            line.mapSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
         }
 
         bool Ghosting { get { return race != null && race.Solo; } }
@@ -205,7 +253,8 @@ namespace ShiftRush.Race
             Play(go, 1f);
             if (r.vehicle != null) r.vehicle.SetControllable(false);
             finishShownAt = Time.unscaledTime + 1.6f;
-            if (finishPosition != null) finishPosition.text = Ordinal(race.PositionOf(r)) + "<size=50%><color=#9AA0B4>  /  " + race.Racers.Count + "</color></size>";
+            BuildStamps();
+            if (finishPosition != null) finishPosition.text = Ordinal(race.PositionOf(r)) + "<size=50%><color=#6E655B>  /  " + race.Racers.Count + "</color></size>";
             if (finishTotal != null) finishTotal.text = RaceManager.FormatTime(r.finishTime);
             if (finishBest != null) finishBest.text = RaceManager.FormatTime(race.BestLap);
             if (Ghosting) GhostResults(r);
@@ -214,16 +263,39 @@ namespace ShiftRush.Race
                 float fastest = float.MaxValue;
                 foreach (var t in r.lapTimes) fastest = Mathf.Min(fastest, t);
                 var sb = new System.Text.StringBuilder();
-                sb.Append("<color=#FF40D9>" + Difficulty.Label + "</color>\n");
+                sb.Append("<color=#B0127F>" + Difficulty.Label + "</color>\n");
                 for (int i = 0; i < r.lapTimes.Count; i++)
                 {
                     bool f = Mathf.Approximately(r.lapTimes[i], fastest);
-                    sb.Append("<color=#9AA0B4>LAP " + (i + 1) + "</color>    ");
-                    sb.Append(f ? "<color=#FF40D9>" + RaceManager.FormatTime(r.lapTimes[i]) + "</color>" : RaceManager.FormatTime(r.lapTimes[i]));
+                    sb.Append("<color=#6E655B>LAP " + (i + 1) + "</color>    ");
+                    sb.Append(f ? "<color=#B0127F>" + RaceManager.FormatTime(r.lapTimes[i]) + "</color>" : RaceManager.FormatTime(r.lapTimes[i]));
                     if (i < r.lapTimes.Count - 1) sb.Append('\n');
                 }
                 finishLaps.text = sb.ToString();
             }
+        }
+
+        /// <summary>The results card and everything on it stamp down in turn, the camera jolting on each.</summary>
+        void BuildStamps()
+        {
+            stamps = new ShiftRush.UI.StampSequence();
+            var card = finishPosition != null ? finishPosition.transform.parent : null;
+            float d = 0f;
+            if (card != null && finishGroup != null && card != finishGroup.transform) { stamps.Add(card, 0f, 0.35f, -6f); d = 0.4f; }
+            if (card != null)
+                foreach (var n in new[] { "Title", "Position Label", "Position", "Total Label", "Total", "Best Label", "Best", "Laps" })
+                {
+                    var c = card.Find(n);
+                    if (c == null) continue;
+                    bool big = n == "Title" || n == "Position";
+                    stamps.Add(c, d, big ? 0.28f : 0.1f, n == "Position" ? -11f : -5f);
+                    d += n.EndsWith("Label") ? 0.08f : 0.24f;
+                }
+            var hint = finishGroup != null ? finishGroup.transform.Find("Hint Tape") : null;
+            if (hint != null) stamps.Add(hint, d + 0.1f, 0.06f, 4f);
+            stamps.Impact = i => Play(i == 0 ? go : beep, i == 0 ? 0.9f : 0.55f);
+            stamps.Hide();
+            stampStart = -1f;
         }
 
         void GhostResults(RaceManager.Racer r)
@@ -255,11 +327,11 @@ namespace ShiftRush.Race
                 for (int i = 0; i < r.lapTimes.Count; i++)
                 {
                     bool f = Mathf.Approximately(r.lapTimes[i], fastest);
-                    sb.Append("<color=#9AA0B4>LAP " + (i + 1) + "</color>    ");
+                    sb.Append("<color=#6E655B>LAP " + (i + 1) + "</color>    ");
                     sb.Append(f ? "<color=" + GhostHex + ">" + RaceManager.FormatTime(r.lapTimes[i]) + "</color>" : RaceManager.FormatTime(r.lapTimes[i]));
                     if (i < r.lapTimes.Count - 1) sb.Append('\n');
                 }
-                if (g != null && g.NewBest && !first) sb.Append("\n<color=#9AA0B4>YOUR NEW GHOST RIDES NEXT RUN</color>");
+                if (g != null && g.NewBest && !first) sb.Append("\n<color=#6E655B>YOUR NEW GHOST RIDES NEXT RUN</color>");
                 finishLaps.text = sb.ToString();
             }
         }
@@ -284,9 +356,9 @@ namespace ShiftRush.Race
             var p = race.Player;
             if (Ghosting) UpdateGhostGap();
             else if (positionValue != null && p != null)
-                positionValue.text = race.PositionOf(p) + "<size=55%><color=#9AA0B4>/" + race.Racers.Count + "</color></size>";
+                positionValue.text = race.PositionOf(p) + "<size=55%><color=#6E655B>/" + race.Racers.Count + "</color></size>";
             if (lapValue != null && p != null)
-                lapValue.text = Mathf.Min(p.lap, race.TotalLaps) + "<size=55%><color=#9AA0B4>/" + race.TotalLaps + "</color></size>";
+                lapValue.text = Mathf.Min(p.lap, race.TotalLaps) + "<size=55%><color=#6E655B>/" + race.TotalLaps + "</color></size>";
             if (timeValue != null) timeValue.text = RaceManager.FormatTime(race.RaceTime);
             if (lapTimeValue != null) lapTimeValue.text = RaceManager.FormatTime(race.CurrentLapTime(p));
             if (bestValue != null) bestValue.text = RaceManager.FormatTime(race.BestLap);
@@ -327,7 +399,7 @@ namespace ShiftRush.Race
             var g = GhostRun.Current;
             if (posLabel != null) posLabel.text = "VS GHOST";
             if (positionValue == null) return;
-            if (g == null || !g.HasGhost) positionValue.text = "<size=55%><color=#9AA0B4>SOLO</color></size>";
+            if (g == null || !g.HasGhost) positionValue.text = "<size=55%><color=#6E655B>SOLO</color></size>";
             else if (g.Delta.HasValue) positionValue.text = Gap(g.Delta.Value);
             else positionValue.text = "<color=" + GhostHex + ">0.00</color>";
         }
@@ -505,13 +577,17 @@ namespace ShiftRush.Race
         void UpdateFinish(float dt)
         {
             if (finishGroup == null || finishShownAt < 0f || Time.unscaledTime < finishShownAt) return;
-            finishGroup.alpha = Mathf.MoveTowards(finishGroup.alpha, 1f, dt * 3f);
+            finishGroup.alpha = Mathf.MoveTowards(finishGroup.alpha, 1f, dt * 5f);
             if (raceGroup != null) raceGroup.alpha = Mathf.MoveTowards(raceGroup.alpha, 0.25f, dt * 3f);
+            if (dashGroup != null) dashGroup.alpha = Mathf.MoveTowards(dashGroup.alpha, 0f, dt * 3f);
+            if (stampStart < 0f) stampStart = Time.unscaledTime;
+            bool landed = stamps == null || stamps.Run(Time.unscaledTime - stampStart);
             if (finishGroup.alpha < 0.9f || SceneLoader.IsLoading || ShiftRush.UI.PauseMenu.IsPaused) return;
 
             var kb = Keyboard.current; var pad = Gamepad.current;
             bool again = (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) || (pad != null && pad.buttonSouth.wasPressedThisFrame);
             bool menu = (kb != null && kb.mKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame);
+            if (!landed) { if (again && stamps != null) { stamps.Finish(); stampStart = Time.unscaledTime - 100f; } return; } // first press skips
             if (again) RaceAgain();
             else if (menu) SceneLoader.Load(MenuScene, "MAIN MENU", "BIKE//RUSH", "");
         }

@@ -1,4 +1,5 @@
 using ShiftRush.Core;
+using ShiftRush.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -39,7 +40,9 @@ namespace ShiftRush.AirShow
 
         AirShowRun run;
         float shownScore, popUntil, popPunch, countPunch, finishAt = -1f, hintUntil;
-        float revealAt = -1f, nextTick;
+        float revealAt = -1f, nextTick, stampLead;
+        ShiftRush.UI.StampSequence stamps;
+        CanvasGroup raceDash;
         bool stamped;
         Color rankColour;
         Vector2 finHome, rankHome;
@@ -62,7 +65,9 @@ namespace ShiftRush.AirShow
                 if (string.IsNullOrEmpty(k)) k = "SHIFT";
                 hintText.text = "FLY THROUGH THE <color=#FF9E2E>BOXES</color>  //  HIT <color=#FF9E2E>" + k.ToUpperInvariant() + "</color> ON THE DIAMOND";
             }
-            hintUntil = Time.unscaledTime + 7f;
+            // First-timers only. With the tutorial on, the coach card teaches the boxes instead.
+            bool firstTime = PlayerPrefs.GetInt("BR_AirShowPlayed", 0) == 0;
+            hintUntil = firstTime && !GameSettings.Tutorial ? Time.unscaledTime + 7f : 0f;
         }
 
         void OnDestroy()
@@ -100,6 +105,8 @@ namespace ShiftRush.AirShow
 
         void OnFinished()
         {
+            PlayerPrefs.SetInt("BR_AirShowPlayed", 1);
+            PlayerPrefs.Save();
             finishAt = Time.unscaledTime + 1.2f;
             if (countdownText != null) countdownText.text = "";
             if (finTitle != null) finTitle.text = run.NewBest && run.Score > 0 ? "NEW HIGH SCORE" : "SHOW'S OVER";
@@ -109,6 +116,22 @@ namespace ShiftRush.AirShow
             if (finRank != null) { finRank.text = rank; SetRank(0f, 3f, -22f); }
             if (rankLabel != null) rankLabel.alpha = 0f;
             if (finScore != null) finScore.text = "0";
+            // Title, score and stats stamp in first; the score then counts up and the rank slams down last.
+            stamps = new ShiftRush.UI.StampSequence();
+            var fin = finScore != null ? finScore.transform.parent : null;
+            float d = 0f;
+            if (fin != null)
+                foreach (var n in new[] { "Title", "Score Label", "Score", "Best Label", "Best", "Stats", "Hint" })
+                {
+                    var c = fin.Find(n);
+                    if (c == null) continue;
+                    bool big = n == "Title" || n == "Score";
+                    stamps.Add(c, d, big ? 0.26f : 0.08f, n == "Score" ? -9f : -5f);
+                    d += n.EndsWith("Label") ? 0.08f : 0.22f;
+                }
+            stamps.Impact = i => { if (audioSource != null && beep != null) audioSource.PlayOneShot(beep, 0.55f); };
+            stamps.Hide();
+            stampLead = stamps.Duration - 0.25f;
             if (finBest != null) finBest.text = run.Best.ToString("N0");
             if (finStats != null)
                 finStats.text = "<color=#9AA0B4>TRICKS LANDED</color>    " + run.Tricks
@@ -150,6 +173,8 @@ namespace ShiftRush.AirShow
 
             if (finishAt < 0f || Time.unscaledTime < finishAt) return;
             if (finishGroup != null) finishGroup.alpha = Mathf.MoveTowards(finishGroup.alpha, 1f, dt * 3f);
+            if (raceDash == null) { var rh = FindFirstObjectByType<ShiftRush.Race.RaceHUD>(); raceDash = rh != null ? rh.Dash : null; }
+            if (raceDash != null) raceDash.alpha = Mathf.MoveTowards(raceDash.alpha, 0f, dt * 3f);
             if (playGroup != null) playGroup.alpha = Mathf.MoveTowards(playGroup.alpha, 0.2f, dt * 3f);
             if (finishGroup != null && finishGroup.alpha < 0.9f) return;
             if (revealAt < 0f) revealAt = Time.unscaledTime;
@@ -158,7 +183,7 @@ namespace ShiftRush.AirShow
             var kb = Keyboard.current; var pad = Gamepad.current;
             bool again = (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) || (pad != null && pad.buttonSouth.wasPressedThisFrame);
             bool menu = (kb != null && kb.mKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame);
-            if (!done) { if (again) revealAt -= 10f; return; } // first press skips to the stamp
+            if (!done) { if (again) { revealAt -= 20f; if (stamps != null) stamps.Finish(); } return; } // first press skips to the stamp
             if (again) RideAgain();
             else if (menu) SceneLoader.Load(MenuScene, "MAIN MENU", "BIKE//RUSH", "");
         }
@@ -170,6 +195,9 @@ namespace ShiftRush.AirShow
         /// </summary>
         bool Reveal(float t)
         {
+            if (stamps != null) stamps.Run(t);
+            t -= stampLead;
+            if (t < 0f) { if (finScore != null) finScore.text = "0"; SetRank(0f, 3f, -22f); return false; }
             // 1. Count up.
             float k = Mathf.Clamp01(t / countSeconds);
             float eased = 1f - Mathf.Pow(1f - k, 3f);
@@ -193,6 +221,7 @@ namespace ShiftRush.AirShow
             if (!stamped)
             {
                 stamped = true;
+                CameraShake.Kick(0.45f);
                 if (audioSource != null)
                 {
                     if (stamp != null) audioSource.PlayOneShot(stamp, 1f);
