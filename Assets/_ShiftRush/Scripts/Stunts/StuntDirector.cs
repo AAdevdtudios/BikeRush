@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ShiftRush.Audio;
 using ShiftRush.Core;
 using ShiftRush.Race;
+using ShiftRush.UI;
 using ShiftRush.Vehicles;
 using TMPro;
 using UnityEngine;
@@ -101,6 +102,7 @@ namespace ShiftRush.Stunts
         InputAction pressAction;
         State state = State.Ground;
         float airTime, promptT, trickT, nextPromptAt, flashUntil, baseFixed, bailUntil, nextFind, settling, arriveTilt, total;
+        float stalled, settleStarted = -1f, trickStarted;
         bool slowed, chainOver, allPerfect, perfect, lesson;
         int beats;
         float helpUntil;
@@ -143,16 +145,23 @@ namespace ShiftRush.Stunts
             if (pressAction == null && ControlBindings.Asset != null) pressAction = ControlBindings.Asset.FindAction("NOS");
             Hud();
             if (bike == null || bike.Body == null || Time.timeScale == 0f) return; // paused
+            HoldTimeScale();
 
             float dt = Time.deltaTime;
             bool air = !bike.AnyWheelGrounded;
             // After a bail: nothing counts until the bike is back up and has had its wheels down a moment.
             if (Time.time < bailUntil || settling > 0f)
             {
-                if (Time.time >= bailUntil) settling = air ? 0.3f : settling - dt;
+                if (Time.time >= bailUntil)
+                {
+                    if (settleStarted < 0f) settleStarted = Time.time;
+                    // Wheels not quite reading the ground (propped on the frame) mustn't keep stunts off for good.
+                    settling = air && Time.time - settleStarted < 2f ? 0.3f : settling - dt;
+                }
                 state = State.Ground;
                 return;
             }
+            settleStarted = -1f;
 
             if (state == State.Ground)
             {
@@ -162,6 +171,14 @@ namespace ShiftRush.Stunts
             if (!air) { Touchdown(); return; }
             airTime += dt;
             arriveTilt = Tilt();
+
+            // Watchdogs. "In the air" only means no wheel is touching: a bike resting on its frame or wedged on an
+            // edge reads as flying, and holding it level would keep it there for good. Barely moving for half a
+            // second in the air isn't flying: land it and stand it back up.
+            stalled = bike.Body.linearVelocity.magnitude < 2f ? stalled + Time.unscaledDeltaTime : 0f;
+            if (stalled > 0.5f) { Unstick(); return; }
+            if (state == State.Trick && Time.unscaledTime - trickStarted > current.seconds * 2f + 0.5f) FinishTrick();
+            if (state == State.Prompt && promptT > PromptLen + 0.5f) Miss("TOO LATE");
 
             switch (state)
             {
@@ -240,6 +257,7 @@ namespace ShiftRush.Stunts
             if (!pick.HasValue) { state = State.Free; chainOver = true; return; }
             current = pick.Value;
             perfect = isPerfect;
+            trickStarted = Time.unscaledTime;
             trickStart = Upright();
             trickT = 0f;
             state = State.Trick;
@@ -269,6 +287,27 @@ namespace ShiftRush.Stunts
             help = why == "TOO EARLY" ? "WAIT FOR THE DIAMOND TO TURN GREEN" : "HIT IT AS THE DIAMOND FILLS THE TARGET";
             helpUntil = Time.unscaledTime + 1.8f;
             GameSfx.Play(Sfx.ShiftMiss, 1f, 0.7f);
+        }
+
+        /// <summary>Out of any stunt state, normal speed, the bike let go; if it's not on its wheels, stood back up.</summary>
+        void Unstick()
+        {
+            stalled = 0f;
+            SetSlow(false);
+            bike.ReleasePose();
+            state = State.Ground;
+            chainOver = true;
+            if (!bike.AnyWheelGrounded || Tilt() > 40f)
+            {
+                Vector3 dir = Vector3.ProjectOnPlane(bike.Transform.forward, Vector3.up);
+                if (dir.sqrMagnitude < 0.01f) dir = Vector3.right;
+                Vector3 p = bike.Body.position;
+                Vector3 n;
+                float d = bike.GroundBelow(p + Vector3.up * 3f, 30f, out n);
+                if (d < 30f) p.y = p.y + 3f - d + 1.1f;
+                bike.Teleport(p, Quaternion.LookRotation(dir.normalized, Vector3.up), 15f);
+                settling = 0.3f;
+            }
         }
 
         void Touchdown()
@@ -356,6 +395,23 @@ namespace ShiftRush.Stunts
             float vDown = -rb.linearVelocity.y, g = -Physics.gravity.y;
             if (h <= 0f) return 0f;
             return (-vDown + Mathf.Sqrt(Mathf.Max(0f, vDown * vDown + 2f * g * h))) / g;
+        }
+
+        /// <summary>
+        /// This owns the game's speed while riding: slow during a prompt, normal otherwise. Anything else that set
+        /// it (the pause menu putting back the speed it saw when it opened, after the prompt has already ended)
+        /// gets put right, so the game can never be left stuck in slow motion.
+        /// </summary>
+        void HoldTimeScale()
+        {
+            if (PauseMenu.IsPaused) return;
+            var shift = Shift.ShiftDirector.Instance;
+            if (shift != null && shift.CurrentState != Shift.ShiftDirector.State.Idle) return; // its own slow motion
+            if (baseFixed <= 0f) baseFixed = 0.02f;
+            float want = slowed ? slowMotion : 1f;
+            if (!Mathf.Approximately(Time.timeScale, want)) Time.timeScale = want;
+            float wantFixed = baseFixed * (slowed ? slowMotion : 1f);
+            if (!Mathf.Approximately(Time.fixedDeltaTime, wantFixed)) Time.fixedDeltaTime = wantFixed;
         }
 
         void SetSlow(bool on)

@@ -69,6 +69,9 @@ namespace ShiftRush.Core
         IEnumerator Run(string scene, string heading, string subheading, string tipText)
         {
             IsLoading = true;
+            // Leaving mid-stunt or from the pause menu: never carry slow motion or a frozen clock into the next scene.
+            Time.timeScale = 1f;
+            Time.fixedDeltaTime = 0.02f;
             title.text = heading.ToUpperInvariant();
             subtitle.text = subheading;
             tip.text = tipText;

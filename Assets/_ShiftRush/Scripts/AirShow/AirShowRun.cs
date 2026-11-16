@@ -53,7 +53,7 @@ namespace ShiftRush.AirShow
         public event System.Action<int> CountdownTick;
         public event System.Action Finished;
 
-        float countdownStart;
+        float countdownStart, stuck;
         Rigidbody[] bodies;
         string BestKey { get { return "BR_AirShowBest_" + SceneManager.GetActiveScene().name; } }
 
@@ -116,8 +116,11 @@ namespace ShiftRush.AirShow
             if (CurrentState != State.Riding) return;
             RunTime += Time.deltaTime;
             var p = Bike.Transform.position;
+            // Stuck still (wedged on a lip, hung up after a landing): back on the line after a few seconds.
+            stuck = Mathf.Abs(Bike.SpeedKmh) < 3f && !ShiftRush.UI.PauseMenu.IsPaused ? stuck + Time.deltaTime : 0f;
             if (p.x >= finishX) Finish();
             else if (p.y < killY) Respawn();
+            else if (stuck > 3f) Respawn(false);
         }
 
         /// <summary>
@@ -146,16 +149,16 @@ namespace ShiftRush.AirShow
             Finished?.Invoke();
         }
 
-        void Respawn()
+        void Respawn(bool bail = true)
         {
+            stuck = 0f;
             Transform spot = null;
             float x = Bike.Transform.position.x;
             if (checkpoints != null)
                 foreach (var c in checkpoints) if (c != null && c.position.x < x - 2f) spot = c;
             Vector3 pos = spot != null ? spot.position : new Vector3(StartX, 20f, 0f);
             Bike.Teleport(pos, Quaternion.LookRotation(Vector3.right, Vector3.up), spot != null ? 30f : 0f);
-            Bails++;
-            Scored?.Invoke(0, "BACK ON THE LINE", "BAIL");
+            if (bail) { Bails++; Scored?.Invoke(0, "BACK ON THE LINE", "BAIL"); }
         }
 
         void OnLanded(string names, string grade, float pay)

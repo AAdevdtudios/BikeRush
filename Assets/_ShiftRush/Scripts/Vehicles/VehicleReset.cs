@@ -32,7 +32,7 @@ namespace ShiftRush.Vehicles
         Vector3 safePos;
         Quaternion safeRot;
         bool hasOverride;
-        float safeTimer, flippedTimer, offTimer, beachedTimer, unlockAt = -1f;
+        float safeTimer, flippedTimer, offTimer, beachedTimer, stalledTimer, unlockAt = -1f;
         int lineHint = -1;
 
         void Awake()
@@ -66,6 +66,9 @@ namespace ShiftRush.Vehicles
             bool beached = !vehicle.AllWheelsGrounded && Mathf.Abs(vehicle.SpeedKmh) < 8f && Vector3.Dot(transform.up, Vector3.up) < 0.94f;
             beachedTimer = beached ? beachedTimer + Time.deltaTime : 0f;
             if (beachedTimer > 3f) { ResetNow("beached"); return; }
+            // Propped up on the frame, wheels off the ground, not moving: upright, so "beached" misses it.
+            stalledTimer = !vehicle.AnyWheelGrounded && Mathf.Abs(vehicle.SpeedKmh) < 3f ? stalledTimer + Time.deltaTime : 0f;
+            if (stalledTimer > 2.5f) { ResetNow("stalled"); return; }
 
             // Off the circuit: past the verge and not on a shortcut. Ignored far from the line (SHIFT worlds).
             var line = Race.RaceLine.Current;
@@ -100,7 +103,7 @@ namespace ShiftRush.Vehicles
         public void ResetNow(string why = "asked")
         {
             LastReason = why;
-            flippedTimer = 0f; offTimer = 0f; beachedTimer = 0f;
+            flippedTimer = 0f; offTimer = 0f; beachedTimer = 0f; stalledTimer = 0f;
             Vector3 pos; Quaternion rot;
             if (!OnRaceLine(out pos, out rot)) { pos = safePos; rot = safeRot; }
             vehicle.Teleport(pos + Vector3.up * respawnLift, rot, 0f);
