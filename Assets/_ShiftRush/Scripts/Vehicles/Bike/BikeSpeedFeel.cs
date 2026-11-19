@@ -58,14 +58,48 @@ namespace ShiftRush.Vehicles
                 if (c.GetComponent<BikeSpeedFeel>() == null) c.gameObject.AddComponent<BikeSpeedFeel>();
         }
 
-        // The pack's chase camera (stunt mode) follows a "Follow" point it parents to the bike without copying the
-        // bike's facing, so if the bike isn't facing world +Z at that moment the camera rides alongside it, side-on.
-        // Keep that point square to the bike: the camera always sits behind.
+        // The camera never follows the bike's rotation: it chases an empty anchor that copies the bike's position and
+        // only its flat heading, and holds that heading while the bike is off the ground. A flip, barrel roll or spin
+        // happens in front of a steady camera instead of dragging it round (the pack's camera reads the bike's yaw,
+        // which jumps 180° the moment a backflip passes vertical). Races only: Air Show has its own side camera.
+        Transform anchor, bikeT;
+        float anchorLift, heading;
+        bool haveHeading;
+
         void Update()
         {
-            if (chase == null || chase.target == null) return;
-            var t = chase.target;
-            if (t.parent != null && t.name == "Follow" && t.localRotation != Quaternion.identity) t.localRotation = Quaternion.identity;
+            if (chase == null) return;
+            var race = ShiftRush.Race.RaceManager.Current;
+            Transform want = null;
+            if (race != null && race.Player != null && race.Player.vehicle != null) want = race.Player.vehicle.Transform;
+            if (want == null && bikeT == null && chase.target != null && chase.target != anchor)
+            {
+                var bc = chase.target.GetComponentInParent<BicycleController>();
+                want = bc != null ? bc.transform : chase.target;
+            }
+            if (want != null && want != bikeT) Follow(want);
+            if (bikeT == null) return;
+
+            if (anchor == null) anchor = new GameObject("Chase Anchor").transform;
+            if (chase.target != anchor) chase.target = anchor; // also undoes anything that points it back at the bike
+            bool onGround = bike == null || bike.AnyWheelGrounded;
+            Vector3 fwd = bikeT.forward; fwd.y = 0f;
+            if ((onGround || !haveHeading) && fwd.sqrMagnitude > 0.04f && Vector3.Dot(bikeT.up, Vector3.up) > 0.5f)
+            {
+                heading = Mathf.Atan2(fwd.x, fwd.z) * Mathf.Rad2Deg;
+                haveHeading = true;
+            }
+            anchor.SetPositionAndRotation(bikeT.position + Vector3.up * anchorLift, Quaternion.Euler(0f, heading, 0f));
+        }
+
+        void Follow(Transform t)
+        {
+            bikeT = t;
+            bike = t.GetComponentInParent<BikeVehicleAdapter>();
+            // Keep the pack's stunt-camera framing: it aimed at the collider's centre, not the bike's origin.
+            var box = t.GetComponent<BoxCollider>();
+            anchorLift = chase.stuntCamera && box != null ? box.center.y : 0f;
+            haveHeading = false;
         }
 
         void Start()
@@ -174,14 +208,6 @@ namespace ShiftRush.Vehicles
         void LateUpdate()
         {
             if (cam == null) return;
-            // The pack's camera follows whichever bike it finds first: in a race, always the player's.
-            var race = ShiftRush.Race.RaceManager.Current;
-            if (chase != null && race != null && race.Player != null && race.Player.vehicle != null)
-            {
-                var me = race.Player.vehicle.Transform;
-                if (me != null && (chase.target == null || chase.target.root != me.root)) { chase.target = me; bike = null; }
-            }
-            if (bike == null && chase != null && chase.target != null) bike = chase.target.GetComponentInParent<BikeVehicleAdapter>();
             SnapBehind();
             float kmh = bike != null ? Mathf.Abs(bike.SpeedKmh) : 0f;
             float t = Mathf.Clamp01(kmh / fastKmh);
