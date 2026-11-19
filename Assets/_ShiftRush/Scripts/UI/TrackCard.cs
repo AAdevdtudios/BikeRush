@@ -28,7 +28,13 @@ namespace ShiftRush.UI
             panel = owner;
             index = i;
             if (number) number.text = (i + 1).ToString("00");
-            if (trackName) trackName.text = track.displayName.ToUpperInvariant();
+            if (trackName)
+            {
+                trackName.text = track.displayName.ToUpperInvariant();
+                // Long names shrink to fit the card instead of running past it.
+                if (!trackName.enableAutoSizing) { trackName.fontSizeMax = trackName.fontSize; trackName.fontSizeMin = trackName.fontSize * 0.6f; trackName.enableAutoSizing = true; }
+                trackName.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+            }
             if (length) length.text = track.LengthLabel;
             if (thumbnail)
             {

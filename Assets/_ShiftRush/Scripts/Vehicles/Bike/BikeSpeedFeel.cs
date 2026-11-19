@@ -73,9 +73,29 @@ namespace ShiftRush.Vehicles
             cam = GetComponent<Camera>();
             chase = GetComponent<BicycleCamera>();
             if (chase != null) { chase.distance = chaseDistance; chase.height = chaseHeight; }
+            // No mouse-look in a race: the pack's free-look swung the camera around whenever the mouse moved.
+            var look = GetComponent<PerfectMouseLook>();
+            if (look != null) { look.movement = false; look.enabled = false; }
             fov = baseFov;
             lines = MakeLines();
             MakePost();
+        }
+
+        /// <summary>
+        /// Always behind the rider: if the camera ends up well off to the side or facing back (a reset, a spin-out),
+        /// put it straight back behind the bike instead of letting it swing slowly round.
+        /// </summary>
+        void SnapBehind()
+        {
+            if (chase == null || chase.target == null) return;
+            var target = chase.target;
+            Vector3 fwd = target.forward; fwd.y = 0f;
+            Vector3 camFwd = transform.forward; camFwd.y = 0f;
+            if (fwd.sqrMagnitude < 0.01f || camFwd.sqrMagnitude < 0.01f) return;
+            if (Vector3.Angle(fwd, camFwd) < 70f) return;
+            fwd.Normalize();
+            transform.position = target.position - fwd * chase.distance + Vector3.up * (chase.height + 0.2f);
+            transform.LookAt(target.position + Vector3.up * chase.lookAtHeight);
         }
 
         /// <summary>A global volume of our own: motion blur that grows with speed, and a soft bloom for the glows.</summary>
@@ -162,6 +182,7 @@ namespace ShiftRush.Vehicles
                 if (me != null && (chase.target == null || chase.target.root != me.root)) { chase.target = me; bike = null; }
             }
             if (bike == null && chase != null && chase.target != null) bike = chase.target.GetComponentInParent<BikeVehicleAdapter>();
+            SnapBehind();
             float kmh = bike != null ? Mathf.Abs(bike.SpeedKmh) : 0f;
             float t = Mathf.Clamp01(kmh / fastKmh);
             bool boosting = bike != null && bike.NitroActive;

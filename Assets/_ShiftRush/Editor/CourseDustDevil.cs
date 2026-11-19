@@ -153,18 +153,25 @@ namespace ShiftRush.EditorTools
         }
 
         /// <summary>The pack's triplanar rock, tinted to canyon red (our material; the textures stay the pack's).</summary>
-        static string GulchRock()
+        static string GulchRock() { RedRockMaterial("M_GulchRock"); return ArtDir + "M_GulchRock.mat"; }
+
+        /// <summary>
+        /// Canyon-red rock on plain URP Lit. The pack's triplanar rock shader samples more textures than a browser
+        /// allows (16), so a tinted copy of it failed in the web build and dragged the frame rate down.
+        /// </summary>
+        internal static Material RedRockMaterial(string name)
         {
-            string path = ArtDir + "M_GulchRock.mat";
-            var src = AssetDatabase.LoadAssetAtPath<Material>(Desert + "Materials/Rock_Triplanar_Red_01.mat");
+            string path = ArtDir + name + ".mat";
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (src == null) return Desert + "Materials/Rock_Triplanar_Red_01.mat";
-            if (m == null) { m = new Material(src); AssetDatabase.CreateAsset(m, path); }
-            else m.CopyPropertiesFromMaterial(src);
-            m.name = "M_GulchRock";
-            if (m.HasProperty("_Color_Tint")) m.SetColor("_Color_Tint", new Color(1f, 0.6f, 0.44f));
+            var lit = Shader.Find("Universal Render Pipeline/Lit");
+            if (m == null) { m = new Material(lit); AssetDatabase.CreateAsset(m, path); }
+            else if (m.shader != lit) { m.shader = lit; m.shaderKeywords = new string[0]; }
+            m.SetColor("_BaseColor", new Color(0.74f, 0.4f, 0.27f));
+            m.SetTexture("_BaseMap", null);
+            m.SetFloat("_Smoothness", 0.08f);
+            m.SetFloat("_Metallic", 0f);
             EditorUtility.SetDirty(m);
-            return path;
+            return m;
         }
 
         [MenuItem("BIKE RUSH/Courses/Build Dust Devil Gulch")]

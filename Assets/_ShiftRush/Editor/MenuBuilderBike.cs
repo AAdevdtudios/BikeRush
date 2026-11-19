@@ -35,9 +35,9 @@ namespace ShiftRush.EditorTools
         {
             new TrailSpec { id = "cloudbreak", name = "Cloudbreak", scene = "Show_Cloudbreak",
                 description = "A summit run at sunset above a sea of cloud: balloons, turbines and a cable car across the valley, and the Summit Drop to finish." },
-            new TrailSpec { id = "redrock", name = "Red Rock Rodeo", scene = "Show_RedRockRodeo",
+            new TrailSpec { id = "redrock", name = "Red Rock", scene = "Show_RedRockRodeo",
                 description = "High noon on a mesa above a red canyon: the Wagon Gap, TNT Alley and the Canyon Drop, with a mine cart rattling over the trestle behind you." },
-            new TrailSpec { id = "cannonball", name = "Cannonball Bay", scene = "Show_CannonballBay",
+            new TrailSpec { id = "cannonball", name = "Cannon Bay", scene = "Show_CannonballBay",
                 description = "Golden hour on the cliffs above a turquoise bay: the Plank Walk, the Crow's Nest and the Cliff Dive, with pirate ships sailing past below." },
         };
 
@@ -59,7 +59,7 @@ namespace ShiftRush.EditorTools
             },
             new TrailSpec
             {
-                id = "dustdevil", name = "Dust Devil Gulch", scene = "Course_DustDevilGulch", spec = CourseBuilder.DustDevilGulch,
+                id = "dustdevil", name = "Dust Devil", scene = "Course_DustDevilGulch", spec = CourseBuilder.DustDevilGulch,
                 description = "Down Main Street, out through the town gate and into a red canyon: under Devil's Arch, through the narrows, up the quarry switchbacks and off the rim beside the old trestle.",
                 tips = new[] { "The mesa kicker at the gate launches you down the sweeper. Land it straight and keep your speed.", "In the narrows the kicker sits left. Take it, or keep right for the clean line.", "Brake before the quarry switchbacks. Three hairpins, then it's flat out along the rim.", "The trestle drop is a lip, not a cliff. Crouch and pop it." },
             },

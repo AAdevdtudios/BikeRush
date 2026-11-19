@@ -41,7 +41,7 @@ namespace ShiftRush.EditorTools
             };
             return new Venue
             {
-                key = "RedRock", title = "RED ROCK RODEO", sub = "AIR SHOW  //  HIGH NOON ON THE MESA", scene = "Show_RedRockRodeo", seed = 73,
+                key = "RedRock", title = "RED ROCK", sub = "RODEO  //  HIGH NOON ON THE MESA", scene = "Show_RedRockRodeo", seed = 73,
                 layout = LayoutRedRock,
                 backdrop = (root, finishX) => BackdropRedRock(root, finishX),
                 life = LifeRedRock,
@@ -222,17 +222,9 @@ namespace ShiftRush.EditorTools
             }
         }
 
-        static Material RedRockMaterial()
-        {
-            string path = ArtDir + "M_RedRockShow.mat";
-            var src = AssetDatabase.LoadAssetAtPath<Material>("Assets/Synty/PolygonNatureBiomes/PNB_Arid_Desert/Materials/Rock_Triplanar_Red_01.mat");
-            if (src == null) return null;
-            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (m == null) { m = new Material(src); AssetDatabase.CreateAsset(m, path); } else m.CopyPropertiesFromMaterial(src);
-            if (m.HasProperty("_Color_Tint")) m.SetColor("_Color_Tint", new Color(1f, 0.6f, 0.44f));
-            EditorUtility.SetDirty(m);
-            return m;
-        }
+        // Plain URP rock: the pack's triplanar shader samples more textures than a browser allows (16), so a tinted
+        // copy of it broke in the web build.
+        static Material RedRockMaterial() { return CourseBuilder.RedRockMaterial("M_RedRockShow"); }
 
         // ------------------------------------------------------------------ CANNONBALL BAY
 
@@ -254,7 +246,7 @@ namespace ShiftRush.EditorTools
             };
             return new Venue
             {
-                key = "Cannonball", title = "CANNONBALL BAY", sub = "AIR SHOW  //  GOLDEN HOUR ON THE CLIFFS", scene = "Show_CannonballBay", seed = 91,
+                key = "Cannonball", title = "CANNON BAY", sub = "AIR SHOW  //  GOLDEN HOUR ON THE CLIFFS", scene = "Show_CannonballBay", seed = 91,
                 layout = LayoutCannonball,
                 backdrop = (root, finishX) => BackdropCannonball(root, finishX),
                 life = LifeCannonball,

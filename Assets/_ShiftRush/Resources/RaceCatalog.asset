@@ -89,7 +89,7 @@ MonoBehaviour:
     - Hold Space to crouch, let go at the lip for more air.
     - R puts you back on the trail.
   - id: dustdevil
-    displayName: Dust Devil Gulch
+    displayName: Dust Devil
     scene: Course_DustDevilGulch
     description: 'Down Main Street, out through the town gate and into a red canyon:
       under Devil''s Arch, through the narrows, up the quarry switchbacks and off
@@ -135,7 +135,7 @@ MonoBehaviour:
     map: {fileID: 21300000, guid: 94c83c2b9f4b546b18de502100ce1472, type: 3}
     loadingTips: []
   - id: redrock
-    displayName: Red Rock Rodeo
+    displayName: Red Rock
     scene: Show_RedRockRodeo
     description: 'High noon on a mesa above a red canyon: the Wagon Gap, TNT Alley
       and the Canyon Drop, with a mine cart rattling over the trestle behind you.'
@@ -144,7 +144,7 @@ MonoBehaviour:
     map: {fileID: 21300000, guid: b690afdd81c854be5a4e870c8eba9347, type: 3}
     loadingTips: []
   - id: cannonball
-    displayName: Cannonball Bay
+    displayName: Cannon Bay
     scene: Show_CannonballBay
     description: 'Golden hour on the cliffs above a turquoise bay: the Plank Walk,
       the Crow''s Nest and the Cliff Dive, with pirate ships sailing past below.'
