@@ -17,8 +17,8 @@ namespace ShiftRush.Core
 
         public static readonly Info[] All =
         {
-            new Info { mode = RideMode.AirShow, name = "AIR SHOW", tag = "SIDE-ON  2.5D  //  STUNTS",
-                description = "The camera swings side-on over a summit at sunset. Fly through the boxes, hit Shift on the diamond, land it clean.",
+            new Info { mode = RideMode.AirShow, name = "AIR SHOW", tag = "SIDE-ON  //  STUNTS",
+                description = "The camera swings side-on over a stunt course. Fly through the boxes, hit Shift on the diamond, land it clean.",
                 badge = "", accent = new Color32(255, 158, 46, 255), ready = true },
             new Info { mode = RideMode.GhostRun, name = "GHOST RUN", tag = "SOLO  //  AGAINST THE CLOCK",
                 description = "Empty trail, one rider, one clock. Chase your best line and race the ghost of your best run.",

@@ -17,11 +17,26 @@ namespace ShiftRush.EditorTools
     /// a mountain range, with balloons, wind turbines, a cable car, birds and flags keeping it all moving.
     /// BIKE RUSH → Courses → Build Cloudbreak. Rebuilding regenerates the scene.
     /// </summary>
-    public static class AirShowBuilder
+    public static partial class AirShowBuilder
     {
         const string Root = "Assets/_ShiftRush/";
         const string ArtDir = Root + "Art/Courses/";
-        const string ScenePath = Root + "Scenes/" + ShiftRush.Core.RideModes.AirShowScene + ".unity";
+        /// <summary>One Air Show venue: its line, its look, the world behind it.</summary>
+        public class Venue
+        {
+            public string key, title, sub, scene;
+            public int seed = 41;
+            public System.Func<float> layout;                 // fills knots/boxes/kickers/checkpoints, returns finish X
+            public System.Action<Transform, float> backdrop, life;
+            public System.Action sky;
+            public Color[] strata;                            // the bands in the cut face
+            public Material top, lip;
+            public string[] crates;                           // stacked behind each kicker
+            public Color accent = new Color32(255, 158, 46, 255);
+            public float startY = 16f;
+        }
+        static Venue V;
+        static string ScenePath { get { return Root + "Scenes/" + V.scene + ".unity"; } }
         const string Alpine = "Assets/Synty/PolygonNatureBiomes/PNB_Alpine_Mountain/";
         const string Generic = "Assets/Synty/PolygonGeneric/Prefabs/";
         const string Font = "Assets/Heat - Complete Modern UI/Fonts/RobotoCondensed-BoldItalic SDF.asset";
@@ -43,9 +58,28 @@ namespace ShiftRush.EditorTools
         static readonly List<(float x, float y, float length, float height)> kickers = new List<(float, float, float, float)>();
         static TMP_FontAsset font;
 
-        [MenuItem("BIKE RUSH/Courses/Build Cloudbreak (Air Show)")]
-        public static void Build()
+        public static Venue Cloudbreak()
         {
+            return new Venue
+            {
+                key = "Cloudbreak", title = "CLOUDBREAK", sub = "AIR SHOW  //  SUMMIT SESSIONS", scene = ShiftRush.Core.RideModes.AirShowScene, seed = 41,
+                layout = Layout, backdrop = Backdrop, life = Life, sky = Sky,
+                strata = new[]
+                {
+                    new Color(0.42f, 0.27f, 0.2f), new Color(0.55f, 0.35f, 0.24f), new Color(0.36f, 0.22f, 0.18f),
+                    new Color(0.62f, 0.42f, 0.28f), new Color(0.47f, 0.3f, 0.23f), new Color(0.3f, 0.19f, 0.17f),
+                },
+                top = CourseBuilder.TrailMaterial(), lip = GrassLip(),
+                crates = new[] { Generic + "Props/SM_Gen_Prop_Crate_01", Generic + "Props/SM_Gen_Prop_Crate_02", Generic + "Props/SM_Gen_Prop_Crate_03" },
+            };
+        }
+
+        [MenuItem("BIKE RUSH/Courses/Build Cloudbreak (Air Show)")]
+        public static void Build() { Build(Cloudbreak()); }
+
+        public static void Build(Venue venue)
+        {
+            V = venue;
             if (EditorApplication.isPlaying) { Debug.LogWarning("Stop Play mode first."); return; }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             CourseBuilder.EnsureFolder(ArtDir.TrimEnd('/'));
@@ -58,17 +92,17 @@ namespace ShiftRush.EditorTools
             if (env != null) Object.DestroyImmediate(env);
             foreach (var old in Object.FindObjectsByType<BikeVehicleAdapter>(FindObjectsSortMode.None)) Object.DestroyImmediate(old.gameObject);
 
-            Random.InitState(41);
-            float finishX = Layout();
-            var venue = new GameObject("Cloudbreak").transform;
+            Random.InitState(V.seed);
+            float finishX = V.layout();
+            var root = new GameObject(V.key).transform;
 
-            Slab(venue);
-            Kickers(venue);
-            TrickBoxes(venue);
-            Backdrop(venue, finishX);
-            Life(venue, finishX);
-            Flags(venue, finishX);
-            StartAndFinish(venue, finishX);
+            Slab(root);
+            Kickers(root);
+            TrickBoxes(root);
+            V.backdrop(root, finishX);
+            V.life(root, finishX);
+            Flags(root, finishX);
+            StartAndFinish(root, finishX);
 
             // The run, its checkpoints and the bike.
             var runGo = new GameObject("Air Show");
@@ -84,6 +118,7 @@ namespace ShiftRush.EditorTools
             var so = new SerializedObject(run);
             so.FindProperty("finishX").floatValue = finishX;
             so.FindProperty("killY").floatValue = -50f;
+            so.FindProperty("venue").stringValue = V.title;
             var cp = so.FindProperty("checkpoints");
             cp.arraySize = cps.Count;
             for (int i = 0; i < cps.Count; i++) cp.GetArrayElementAtIndex(i).objectReferenceValue = cps[i];
@@ -98,12 +133,12 @@ namespace ShiftRush.EditorTools
             }
 
             Camera();
-            Sky();
+            V.sky();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             CourseBuilder.AddToBuild(ScenePath);
-            Debug.Log("[BIKE//RUSH] Built Cloudbreak: " + finishX.ToString("0") + " m, " + boxes.Count + " trick boxes.");
+            Debug.Log("[BIKE//RUSH] Built " + V.title + ": " + finishX.ToString("0") + " m, " + boxes.Count + " trick boxes.");
         }
 
         // ------------------------------------------------------------------ the line of the course
@@ -157,7 +192,7 @@ namespace ShiftRush.EditorTools
         }
 
         /// <summary>A small launch, off a cliff, onto a long falling landing 20 m below.</summary>
-        static float Drop(float x, ref float y)
+        static float Drop(float x, ref float y, string label = "SUMMIT DROP")
         {
             float y0 = y;
             checkpoints.Add(new Vector3(x - 18f, y0 + 1.2f, 0f));
@@ -173,7 +208,7 @@ namespace ShiftRush.EditorTools
             {
                 centre = new Vector3(lip + 20f, y0 + 1.5f, 0f),
                 size = new Vector3(34f, 13f, 7f),
-                label = "SUMMIT DROP",
+                label = label,
             });
             y = y0 - 20f;
             return landEnd + 26f;
@@ -249,21 +284,21 @@ namespace ShiftRush.EditorTools
                 lip.Add(t0); lip.Add(t1); lip.Add(b0); lip.Add(t1); lip.Add(b1); lip.Add(b0);
             }
 
-            var mesh = new Mesh { name = "Cloudbreak_Slab", indexFormat = IndexFormat.UInt32, subMeshCount = 3 };
+            var mesh = new Mesh { name = V.key + "_Slab", indexFormat = IndexFormat.UInt32, subMeshCount = 3 };
             mesh.SetVertices(v); mesh.SetUVs(0, uv);
             mesh.SetTriangles(top, 0); mesh.SetTriangles(face, 1); mesh.SetTriangles(lip, 2);
             mesh.RecalculateNormals(); mesh.RecalculateBounds();
-            CourseBuilder.SaveMesh(mesh, "Cloudbreak_Slab");
+            CourseBuilder.SaveMesh(mesh, V.key + "_Slab");
 
             var go = new GameObject("Course Slab", typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider));
             go.transform.SetParent(parent, false);
             go.GetComponent<MeshFilter>().sharedMesh = mesh;
             go.GetComponent<MeshCollider>().sharedMesh = mesh;
-            go.GetComponent<MeshRenderer>().sharedMaterials = new[] { CourseBuilder.TrailMaterial(), StrataMaterial(), GrassLip() };
+            go.GetComponent<MeshRenderer>().sharedMaterials = new[] { V.top, StrataMaterial(), V.lip };
             go.isStatic = true;
 
             // Invisible, frictionless side walls: nothing rides off the front or back of the course.
-            var slick = new PhysicsMaterial("Cloudbreak_Wall") { dynamicFriction = 0f, staticFriction = 0f, frictionCombine = PhysicsMaterialCombine.Minimum, bounciness = 0f };
+            var slick = new PhysicsMaterial(V.key + "_Wall") { dynamicFriction = 0f, staticFriction = 0f, frictionCombine = PhysicsMaterialCombine.Minimum, bounciness = 0f };
             for (int side = -1; side <= 1; side += 2)
             {
                 var wall = new GameObject(side < 0 ? "Wall Front" : "Wall Back");
@@ -279,14 +314,10 @@ namespace ShiftRush.EditorTools
 
         static Material StrataMaterial()
         {
-            string texPath = ArtDir + "T_Strata.png";
+            string texPath = ArtDir + (V.key == "Cloudbreak" ? "T_Strata.png" : "T_Strata_" + V.key + ".png");
             const int w = 256, h = 256;
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            var bands = new[]
-            {
-                new Color(0.42f, 0.27f, 0.2f), new Color(0.55f, 0.35f, 0.24f), new Color(0.36f, 0.22f, 0.18f),
-                new Color(0.62f, 0.42f, 0.28f), new Color(0.47f, 0.3f, 0.23f), new Color(0.3f, 0.19f, 0.17f),
-            };
+            var bands = V.strata;
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
@@ -302,7 +333,7 @@ namespace ShiftRush.EditorTools
             AssetDatabase.ImportAsset(texPath, ImportAssetOptions.ForceSynchronousImport);
             var imp = (TextureImporter)AssetImporter.GetAtPath(texPath);
             imp.wrapMode = TextureWrapMode.Repeat; imp.filterMode = FilterMode.Bilinear; imp.SaveAndReimport();
-            var m = CourseBuilder.SimpleMat("M_Strata", Color.white, Color.black, 0.05f);
+            var m = CourseBuilder.SimpleMat(V.key == "Cloudbreak" ? "M_Strata" : "M_Strata_" + V.key, Color.white, Color.black, 0.05f);
             m.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(texPath));
             EditorUtility.SetDirty(m);
             return m;
@@ -329,9 +360,9 @@ namespace ShiftRush.EditorTools
             var deck = CourseBuilder.SimpleMat("M_AirKickerDeck", new Color(0.5f, 0.34f, 0.2f), Color.black, 0.15f);
             var lipMat = CourseBuilder.SimpleMat("M_AirKickerLip", Amber, Amber * 1.8f, 0.4f);
             var crates = new List<GameObject>();
-            for (int i = 1; i <= 3; i++)
+            foreach (var path in V.crates)
             {
-                var c = AssetDatabase.LoadAssetAtPath<GameObject>(Generic + "Props/SM_Gen_Prop_Crate_0" + i + ".prefab");
+                var c = AssetDatabase.LoadAssetAtPath<GameObject>(path + ".prefab");
                 if (c != null) crates.Add(c);
             }
             for (int k = 0; k < kickers.Count; k++)
@@ -340,7 +371,7 @@ namespace ShiftRush.EditorTools
                 var go = new GameObject("Kicker " + (k + 1), typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider));
                 go.transform.SetParent(group, false);
                 go.transform.SetPositionAndRotation(new Vector3(kk.x, kk.y + 0.02f, 0f), Quaternion.LookRotation(Vector3.right, Vector3.up));
-                var mesh = CourseBuilder.KickerMesh(5.4f, kk.length, kk.height, "Cloudbreak_Kicker" + (k + 1));
+                var mesh = CourseBuilder.KickerMesh(5.4f, kk.length, kk.height, V.key + "_Kicker" + (k + 1));
                 go.GetComponent<MeshFilter>().sharedMesh = mesh;
                 go.GetComponent<MeshCollider>().sharedMesh = mesh;
                 go.GetComponent<MeshRenderer>().sharedMaterials = new[] { deck, lipMat };
@@ -475,10 +506,10 @@ namespace ShiftRush.EditorTools
                     int a = r * cols + c, b = a + 1, d = a + cols, e = d + 1;
                     tris.Add(a); tris.Add(d); tris.Add(b); tris.Add(b); tris.Add(d); tris.Add(e);
                 }
-            var mesh = new Mesh { name = "Cloudbreak_Valley", indexFormat = IndexFormat.UInt32 };
+            var mesh = new Mesh { name = V.key + "_Valley", indexFormat = IndexFormat.UInt32 };
             mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(tris, 0);
             mesh.RecalculateNormals(); mesh.RecalculateBounds();
-            CourseBuilder.SaveMesh(mesh, "Cloudbreak_Valley");
+            CourseBuilder.SaveMesh(mesh, V.key + "_Valley");
             var valley = new GameObject("Valley", typeof(MeshFilter), typeof(MeshRenderer));
             valley.transform.SetParent(group, false);
             valley.GetComponent<MeshFilter>().sharedMesh = mesh;
@@ -778,8 +809,8 @@ namespace ShiftRush.EditorTools
             CourseBuilder.Cube(sign, "Leg", sign.position + new Vector3(7f, 3.5f, 0.3f), new Vector3(0.4f, 7f, 0.4f), Vector3.forward, post);
             CourseBuilder.Cube(sign, "Board", sign.position + new Vector3(0f, 8.6f, 0.3f), new Vector3(17f, 4.6f, 0.4f), Vector3.forward, post);
             CourseBuilder.Cube(sign, "Glow", sign.position + new Vector3(0f, 6.45f, 0.05f), new Vector3(16.4f, 0.16f, 0.05f), Vector3.forward, glow);
-            Text(sign, "Title", "CLOUDBREAK", new Vector3(0f, 8.75f, 0.05f), 30f, Color.white, TextAlignmentOptions.Center, new Vector2(17f, 3.2f));
-            Text(sign, "Sub", "AIR SHOW  //  SUMMIT SESSIONS", new Vector3(0f, 7.25f, 0.05f), 9f, Amber, TextAlignmentOptions.Center, new Vector2(17f, 1.4f));
+            Text(sign, "Title", V.title, new Vector3(0f, 8.75f, 0.05f), 30f, Color.white, TextAlignmentOptions.Center, new Vector2(17f, 3.2f));
+            Text(sign, "Sub", V.sub, new Vector3(0f, 7.25f, 0.05f), 9f, Amber, TextAlignmentOptions.Center, new Vector2(17f, 1.4f));
         }
 
         static void Arch(Transform parent, float x, string label, Material post, Material glow, float height)

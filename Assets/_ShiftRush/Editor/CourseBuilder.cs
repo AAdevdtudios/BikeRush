@@ -13,7 +13,7 @@ namespace ShiftRush.EditorTools
     /// gates, and the bikes. BIKE RUSH → Courses → Build Ridge Line. Rebuilding regenerates the scene.
     /// The scene starts as a copy of BikeTest (camera, light, bike), so the bike and camera set-up carry over.
     /// </summary>
-    public static class CourseBuilder
+    public static partial class CourseBuilder
     {
         const string Root = "Assets/_ShiftRush/";
         const string ArtDir = Root + "Art/Courses/";
@@ -42,6 +42,35 @@ namespace ShiftRush.EditorTools
             public Jump[] jumps;
             public int laps = 2;
             public int seed = 7;
+            /// <summary>Ground, trail, scenery, light and air. Null = the Alpine look Ridge Line was made with.</summary>
+            public Theme theme;
+            /// <summary>Extra flat ground either side of the trail at a distance along it (a town street, a quay).</summary>
+            public System.Func<float, float> wideAt;
+            /// <summary>Reshapes the land away from the trail: (x, z, trail height, metres from trail, distance along, natural height) → height.</summary>
+            public System.Func<float, float, float, float, float, float, float> shape;
+            /// <summary>The set pieces: buildings, landmarks, things to ride through. Runs before the scatter, which keeps clear of them.</summary>
+            public System.Action<Dress> dress;
+            /// <summary>How many metres the land takes to leave the trail's level at a distance along (16 by default; small for a quay wall).</summary>
+            public System.Func<float, float> blendAt;
+            /// <summary>Metres along the lap for the track-select photo.</summary>
+            public float heroAt = -1f;
+            /// <summary>Filled in by the build: how far along the lap each control point sits.</summary>
+            public float[] cpAlong;
+            public float lapLength;
+            /// <summary>Is this distance along the lap between control points a and b (wrapping past the line)?</summary>
+            public bool Between(float along, int a, int b, float before = 0f, float after = 0f)
+            {
+                float d0 = cpAlong[a] - before, d1 = cpAlong[b] + after;
+                along = Mathf.Repeat(along, lapLength); d0 = Mathf.Repeat(d0, lapLength); d1 = Mathf.Repeat(d1, lapLength);
+                return d0 <= d1 ? along >= d0 && along <= d1 : along >= d0 || along <= d1;
+            }
+            /// <summary>1 inside the stretch a..b, easing to 0 over fade metres outside it.</summary>
+            public float Weight(float along, int a, int b, float fade)
+            {
+                if (Between(along, a, b)) return 1f;
+                float d0 = Mathf.Repeat(cpAlong[a] - along, lapLength), d1 = Mathf.Repeat(along - cpAlong[b], lapLength);
+                return Mathf.SmoothStep(0f, 1f, 1f - Mathf.Min(d0, d1) / fade);
+            }
         }
 
         public static Spec RidgeLine()
@@ -102,6 +131,9 @@ namespace ShiftRush.EditorTools
 
             Random.InitState(spec.seed);
             var line = Centreline(spec);
+            spec.lapLength = line.length;
+            spec.cpAlong = new float[spec.points.Length];
+            for (int k = 0; k < spec.points.Length; k++) spec.cpAlong[k] = line.distances[line.Nearest(spec.points[k])];
             var course = new GameObject(spec.name);
             string key = spec.name.Replace(" ", "");
 
@@ -110,12 +142,15 @@ namespace ShiftRush.EditorTools
             trailGo.transform.SetParent(course.transform, false);
             trailGo.GetComponent<MeshFilter>().sharedMesh = trail;
             trailGo.GetComponent<MeshCollider>().sharedMesh = trail;
-            trailGo.GetComponent<MeshRenderer>().sharedMaterial = TrailMaterial();
+            trailGo.GetComponent<MeshRenderer>().sharedMaterial = spec.theme != null ? spec.theme.TrailMaterial(key) : TrailMaterial();
             trailGo.isStatic = true;
 
-            var terrain = MakeTerrain(line, key, course.transform);
+            var terrain = MakeTerrain(line, key, course.transform, spec);
             MakeJumps(spec, line, course.transform, key);
-            Scenery(line, terrain, course.transform);
+            var dress = new Dress(spec, line, terrain, course.transform);
+            if (spec.dress != null) spec.dress(dress);
+            if (spec.theme != null) ThemeScenery(spec.theme, dress);
+            else Scenery(line, terrain, course.transform);
             Arrows(line, terrain, course.transform);
             Markers(line, terrain, course.transform);
             BoostPads(line, course.transform);
@@ -130,13 +165,17 @@ namespace ShiftRush.EditorTools
             var cam = Object.FindFirstObjectByType<SBPScripts.BicycleCamera>();
             if (cam != null) { cam.target = player.transform; cam.transform.position = player.transform.position - player.transform.forward * 4f + Vector3.up * 2.5f; }
 
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.72f, 0.82f, 0.9f);
-            RenderSettings.fogStartDistance = 120f;
-            RenderSettings.fogEndDistance = 620f;
-            var sun = GameObject.Find("Directional Light");
-            if (sun != null) sun.transform.rotation = Quaternion.Euler(38f, -50f, 0f);
+            if (spec.theme != null) spec.theme.Atmosphere(key, course.transform);
+            else
+            {
+                RenderSettings.fog = true;
+                RenderSettings.fogMode = FogMode.Linear;
+                RenderSettings.fogColor = new Color(0.72f, 0.82f, 0.9f);
+                RenderSettings.fogStartDistance = 120f;
+                RenderSettings.fogEndDistance = 620f;
+                var sun = GameObject.Find("Directional Light");
+                if (sun != null) sun.transform.rotation = Quaternion.Euler(38f, -50f, 0f);
+            }
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -237,7 +276,7 @@ namespace ShiftRush.EditorTools
             return line;
         }
 
-        static Vector3 Flat(Vector3 v) { return new Vector3(v.x, 0f, v.z); }
+        internal static Vector3 Flat(Vector3 v) { return new Vector3(v.x, 0f, v.z); }
 
         static Vector3 CatmullRom(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
         {
@@ -329,7 +368,7 @@ namespace ShiftRush.EditorTools
             }
         }
 
-        static int IndexAt(Line line, float d)
+        internal static int IndexAt(Line line, float d)
         {
             d = Mathf.Repeat(d, line.length);
             for (int i = line.points.Length - 1; i >= 0; i--) if (line.distances[i] <= d) return i;
@@ -396,7 +435,7 @@ namespace ShiftRush.EditorTools
         const int HeightRes = 513;
         const float TerrainHeight = 140f;
 
-        static Terrain MakeTerrain(Line line, string key, Transform parent)
+        static Terrain MakeTerrain(Line line, string key, Transform parent, Spec spec)
         {
             // Centre the terrain on the course.
             Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
@@ -409,6 +448,7 @@ namespace ShiftRush.EditorTools
             float cell = TerrainSize / (HeightRes - 1);
             var h = new float[HeightRes, HeightRes];
             var nearDist = new float[HeightRes, HeightRes];
+            var nearWide = new float[HeightRes, HeightRes];
             float band = HalfWidth + Shoulder + 0.5f;
             float noiseX = Random.Range(0f, 1000f), noiseZ = Random.Range(0f, 1000f);
             var pts = line.points;
@@ -417,34 +457,50 @@ namespace ShiftRush.EditorTools
                 {
                     float wx = origin.x + x * cell, wz = origin.z + z * cell;
                     // Nearest point on the trail (segments), with its height.
-                    float best = float.MaxValue, roadY = 0f;
+                    float best = float.MaxValue, roadY = 0f; int bestI = 0;
                     for (int i = 0; i < pts.Length; i += 2)
                     {
                         float dx = pts[i].x - wx, dz = pts[i].z - wz, d = dx * dx + dz * dz;
-                        if (d < best) { best = d; roadY = pts[i].y; }
+                        if (d < best) { best = d; roadY = pts[i].y; bestI = i; }
                     }
                     best = Mathf.Sqrt(best);
                     nearDist[z, x] = best;
+                    float along = line.distances[bestI];
+                    float wide = spec.wideAt != null ? Mathf.Max(0f, spec.wideAt(along)) : 0f;
+                    nearWide[z, x] = wide;
+                    float bandHere = band + wide;
                     // Rolling hills either side of the trail, rising to mountains far out.
                     float n = Mathf.PerlinNoise(noiseX + wx * 0.011f, noiseZ + wz * 0.011f);
                     float n2 = Mathf.PerlinNoise(noiseX + 300f + wx * 0.04f, noiseZ + wz * 0.04f);
-                    float away = Mathf.Max(0f, best - band);
+                    float away = Mathf.Max(0f, best - bandHere);
                     float natural = roadY + away * Mathf.Lerp(-0.22f, 0.55f, n) + (n2 - 0.5f) * 3f * Mathf.Clamp01(away / 12f);
                     natural += Mathf.Max(0f, best - 170f) * 0.45f;
-                    float blend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(band, band + 16f, best));
+                    if (spec.shape != null) natural = spec.shape(wx, wz, roadY, best, along, natural);
+                    float blendWidth = spec.blendAt != null ? Mathf.Max(0.5f, spec.blendAt(along)) : 16f;
+                    float blend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(bandHere, bandHere + blendWidth, best));
                     float y = Mathf.Lerp(roadY - 0.35f, natural, blend);
                     h[z, x] = Mathf.Clamp01(Mathf.Max(0.5f, y) / TerrainHeight);
                 }
             data.SetHeights(0, 0, h);
 
+            // The asset has to exist before painting, or the splat maps aren't saved with it.
+            string path = ArtDir + key + "_Terrain.asset";
+            AssetDatabase.DeleteAsset(path);
+            AssetDatabase.CreateAsset(data, path);
+
             // Paint: grass, dirt by the trail, rock on the steep, moss in patches.
             var layers = new List<TerrainLayer>();
-            string t = Alpine + "Terrain/";
-            foreach (var name in new[] { "Grass_01", "Pine_Dirt", "RiverRocks_02", "Pine_Moss_01" })
+            if (spec.theme != null) layers.AddRange(spec.theme.TerrainLayers(key));
+            else
             {
-                var l = AssetDatabase.LoadAssetAtPath<TerrainLayer>(t + name + ".terrainlayer");
-                if (l != null) layers.Add(l);
+                string t = Alpine + "Terrain/";
+                foreach (var name in new[] { "Grass_01", "Pine_Dirt", "RiverRocks_02", "Pine_Moss_01" })
+                {
+                    var l = AssetDatabase.LoadAssetAtPath<TerrainLayer>(t + name + ".terrainlayer");
+                    if (l != null) layers.Add(l);
+                }
             }
+            float patchBelow = spec.theme != null ? spec.theme.patchBelow : float.NaN;
             if (layers.Count == 4)
             {
                 data.terrainLayers = layers.ToArray();
@@ -455,19 +511,30 @@ namespace ShiftRush.EditorTools
                     {
                         float fx = x / (float)(ar - 1), fz = z / (float)(ar - 1);
                         float steep = data.GetSteepness(fx, fz);
-                        float dist = nearDist[Mathf.RoundToInt(fz * (HeightRes - 1)), Mathf.RoundToInt(fx * (HeightRes - 1))];
-                        float dirt = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(band, band + 4f, dist));
+                        int hz = Mathf.RoundToInt(fz * (HeightRes - 1)), hx = Mathf.RoundToInt(fx * (HeightRes - 1));
+                        float dist = nearDist[hz, hx];
+                        float bandHere = band + nearWide[hz, hx];
+                        // Ragged edge: the worn ground spreads unevenly, so the trail doesn't read as a painted stripe.
+                        float rag = spec.theme != null ? (Mathf.PerlinNoise(x * 0.21f, z * 0.21f) - 0.5f) * 3f : 0f;
+                        float dirt = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(bandHere + rag, bandHere + rag + 4f, dist));
                         float rock = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(30f, 42f, steep)) * (1f - dirt);
-                        float moss = Mathf.Clamp01((Mathf.PerlinNoise(x * 0.06f, z * 0.06f) - 0.55f) * 4f) * (1f - dirt) * (1f - rock);
+                        float moss;
+                        if (float.IsNaN(patchBelow)) moss = Mathf.Clamp01((Mathf.PerlinNoise(x * 0.06f, z * 0.06f) - 0.55f) * 4f) * (1f - dirt) * (1f - rock);
+                        else
+                        {
+                            float hy = data.GetInterpolatedHeight(fx, fz) + (Mathf.PerlinNoise(x * 0.1f, z * 0.1f) - 0.5f) * 1.2f;
+                            moss = (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(patchBelow, patchBelow + 1.5f, hy))) * (1f - rock);
+                            dirt *= 1f - moss * 0.6f;
+                        }
                         float grass = Mathf.Max(0f, 1f - dirt - rock - moss);
-                        a[z, x, 0] = grass; a[z, x, 1] = dirt; a[z, x, 2] = rock; a[z, x, 3] = moss;
+                        float sum = Mathf.Max(1e-4f, grass + dirt + rock + moss);
+                        a[z, x, 0] = grass / sum; a[z, x, 1] = dirt / sum; a[z, x, 2] = rock / sum; a[z, x, 3] = moss / sum;
                     }
                 data.SetAlphamaps(0, 0, a);
             }
 
-            string path = ArtDir + key + "_Terrain.asset";
-            AssetDatabase.DeleteAsset(path);
-            AssetDatabase.CreateAsset(data, path);
+            EditorUtility.SetDirty(data);
+            AssetDatabase.SaveAssets();
             var go = Terrain.CreateTerrainGameObject(data);
             go.name = "Terrain";
             go.transform.SetParent(parent, false);
@@ -539,9 +606,9 @@ namespace ShiftRush.EditorTools
         /// Some Synty cliffs use a glacier material on the refractive shader graph, which doesn't import here
         /// (renders pink). Swap any material with a broken shader for the pack's plain Alpine rock.
         /// </summary>
-        public static void FixBrokenMaterials(GameObject go)
+        public static void FixBrokenMaterials(GameObject go, Material fallback = null)
         {
-            var rock = AssetDatabase.LoadAssetAtPath<Material>(Alpine + "Materials/PolygonNatureBiomes_Alpine_Mat_01.mat");
+            var rock = fallback != null ? fallback : AssetDatabase.LoadAssetAtPath<Material>(Alpine + "Materials/PolygonNatureBiomes_Alpine_Mat_01.mat");
             if (rock == null) return;
             foreach (var r in go.GetComponentsInChildren<Renderer>())
             {
@@ -804,8 +871,9 @@ namespace ShiftRush.EditorTools
                     foreach (var a in avoid) if (Flat(a - pos).sqrMagnitude < 18f * 18f) clear = false;
                     foreach (var q in placed) if (Flat(q - pos).sqrMagnitude < 7f * 7f) clear = false;
                     if (!clear) continue;
-                    placed.Add(pos);
                     pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
+                    if (Blocked(pos, 1.3f)) continue;
+                    placed.Add(pos);
                     // Face the riders coming in, turned a little towards the inside of the bend.
                     Vector3 face = Quaternion.AngleAxis(18f * sign, Vector3.up) * f;
                     Board(root, "Arrow " + (++count), pos, face, sign > 0f ? right : left, post);
@@ -847,6 +915,7 @@ namespace ShiftRush.EditorTools
                     foreach (var b in boards) if (Flat(b - pos).sqrMagnitude < 3.5f * 3.5f) clear = false;
                     if (!clear) continue;
                     pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
+                    if (Blocked(pos, 0.45f)) continue;
                     var g = new GameObject("Marker").transform; g.SetParent(root, false); g.position = pos;
                     var a1 = Cube(g, "Post", pos + Vector3.up * 0.5f, new Vector3(0.12f, 1f, 0.12f), f, post);
                     var a2 = Cube(g, "Cap", pos + Vector3.up * 1.08f, new Vector3(0.14f, 0.16f, 0.14f), f, (i / step) % 2 == 0 ? hot : cool);

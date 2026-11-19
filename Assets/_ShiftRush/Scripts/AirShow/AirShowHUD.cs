@@ -260,7 +260,8 @@ namespace ShiftRush.AirShow
         {
             string scene = SceneManager.GetActiveScene().name;
             var car = RaceSession.Car;
-            SceneLoader.Load(scene, RideModes.AirShowVenue, (car != null ? car.displayName.ToUpperInvariant() + "  //  " : "") + "AIR SHOW", RideModes.AirShowTip());
+            string venue = AirShowRun.Current != null ? AirShowRun.Current.Venue : RideModes.AirShowVenue;
+            SceneLoader.Load(scene, venue, (car != null ? car.displayName.ToUpperInvariant() + "  //  " : "") + "AIR SHOW", RideModes.AirShowTip());
         }
 
         static string Clock(float t)

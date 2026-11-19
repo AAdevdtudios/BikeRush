@@ -255,7 +255,7 @@ namespace ShiftRush.Vehicles
             if (!boost) drained = false;
             boosting = want && !drained && tank > 0f && (boosting || tank >= MinBoostStart);
             if (boosting) tank = Mathf.Max(0f, tank - burnPerSecond * dt);
-            else if (regen) tank = Mathf.Min(1f, tank + regenPerSecond * dt);
+            else if (regen) tank = Mathf.Min(1f, tank + regenPerSecond * RegenScale * dt);
             bike.sprint = boosting || surge > 0f;
             if (surge > 0f) surge = Mathf.Max(0f, surge - dt);
 
@@ -415,6 +415,8 @@ namespace ShiftRush.Vehicles
         public void SetNitro(float fill01) { tank = Mathf.Clamp01(fill01); }
         public void AddNitro(float fill01) { tank = Mathf.Clamp01(tank + fill01); }
         public void SetRegeneration(bool on) { regen = on; }
+        /// <summary>The tank's own refill rate, × this (the race difficulty sets it for the player).</summary>
+        public float RegenScale { get; set; } = 1f;
         public void SetNitroInput(bool on) { boostInputOn = on; }
 
         // ---- IDriverInput

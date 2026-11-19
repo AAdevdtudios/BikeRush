@@ -31,19 +31,21 @@ namespace ShiftRush.Core
             public float shiftWindow;
             /// <summary>Where a cleared SHIFT world drops you: a random place from warpBest to warpWorst.</summary>
             public int warpBest, warpWorst;
-            /// <summary>Slipstream, close call and wall skim nitro, × this.</summary>
+            /// <summary>Slipstream, close call, wall skim and stunt boost, × this.</summary>
             public float bonusNitro;
+            /// <summary>How fast your boost tank refills by itself, × the bike's own rate.</summary>
+            public float boostRefill;
             public string blurb;
         }
 
         static readonly Tuning[] Levels =
         {
-            new Tuning { pace = 0.9f, push = 0.04f, ease = 0.14f, carBoost = 1f, rivalNitro = 0f, gridSlot = 2, warpBest = 1, warpWorst = 2, shiftWindow = 1.3f, bonusNitro = 1.25f,
-                blurb = "Gentler rivals, a wider landing window, more boost. You start 3rd." },
-            new Tuning { pace = 1f, push = 0.06f, ease = 0.06f, carBoost = 1f, rivalNitro = 0f, gridSlot = 4, warpBest = 1, warpWorst = 3, shiftWindow = 1f, bonusNitro = 1f,
-                blurb = "The race as it's meant to be. You start 5th." },
-            new Tuning { pace = 1.12f, push = 0.15f, ease = 0f, carBoost = 1.12f, rivalNitro = 0.025f, gridSlot = 5, warpBest = 2, warpWorst = 4, shiftWindow = 0.8f, bonusNitro = 0.8f,
-                blurb = "Faster rivals who never wait, a tight landing window. You start last." },
+            new Tuning { pace = 0.9f, push = 0.04f, ease = 0.14f, carBoost = 1f, rivalNitro = 0f, gridSlot = 2, warpBest = 1, warpWorst = 2, shiftWindow = 1.3f, bonusNitro = 1.25f, boostRefill = 1.7f,
+                blurb = "Gentler rivals, a wider landing window, boost refills fast. You start 3rd." },
+            new Tuning { pace = 1f, push = 0.06f, ease = 0.06f, carBoost = 1f, rivalNitro = 0f, gridSlot = 4, warpBest = 1, warpWorst = 3, shiftWindow = 1f, bonusNitro = 1f, boostRefill = 1f,
+                blurb = "The race as it's meant to be. Boost refills steadily. You start 5th." },
+            new Tuning { pace = 1.12f, push = 0.15f, ease = 0f, carBoost = 1.12f, rivalNitro = 0.025f, gridSlot = 5, warpBest = 2, warpWorst = 4, shiftWindow = 0.8f, bonusNitro = 0.9f, boostRefill = 0.55f,
+                blurb = "Faster rivals who never wait, a tight landing window. Boost refills slowly: earn it with stunts. You start last." },
         };
 
         /// <summary>The level the player picked.</summary>

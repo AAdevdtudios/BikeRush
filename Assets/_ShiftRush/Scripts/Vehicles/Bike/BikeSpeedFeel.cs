@@ -40,11 +40,32 @@ namespace ShiftRush.Vehicles
         float fov, kick;
         bool wasBoosting;
 
+        // On the first scene and on every scene loaded after it (a race picked from the menu): the start-up hook
+        // alone only ever saw the first scene, so races loaded from the menu ran without this.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Install()
         {
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+            AddToCameras();
+        }
+
+        static void OnSceneLoaded(UnityEngine.SceneManagement.Scene s, UnityEngine.SceneManagement.LoadSceneMode m) { AddToCameras(); }
+
+        static void AddToCameras()
+        {
             foreach (var c in FindObjectsByType<BicycleCamera>(FindObjectsSortMode.None))
                 if (c.GetComponent<BikeSpeedFeel>() == null) c.gameObject.AddComponent<BikeSpeedFeel>();
+        }
+
+        // The pack's chase camera (stunt mode) follows a "Follow" point it parents to the bike without copying the
+        // bike's facing, so if the bike isn't facing world +Z at that moment the camera rides alongside it, side-on.
+        // Keep that point square to the bike: the camera always sits behind.
+        void Update()
+        {
+            if (chase == null || chase.target == null) return;
+            var t = chase.target;
+            if (t.parent != null && t.name == "Follow" && t.localRotation != Quaternion.identity) t.localRotation = Quaternion.identity;
         }
 
         void Start()

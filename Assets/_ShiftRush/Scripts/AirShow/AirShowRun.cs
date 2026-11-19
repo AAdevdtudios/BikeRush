@@ -80,6 +80,7 @@ namespace ShiftRush.AirShow
                 var choice = RaceSession.Car;
                 if (choice != null) Bike.ApplyTuning(BikeTuning.Load(choice.id));
                 Bike.SetRegeneration(true);
+                Bike.RegenScale = Core.Difficulty.Current.boostRefill;
                 Bike.SetNitro(startBoost);
                 Bike.SetControllable(false);
                 StartX = Bike.Transform.position.x;

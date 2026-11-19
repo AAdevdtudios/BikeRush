@@ -78,8 +78,18 @@ namespace ShiftRush.Vehicles
                 float lat = Mathf.Abs(line.Lateral(transform.position, lineHint));
                 float away = (line.points[lineHint] - transform.position).magnitude;
                 bool off = away < 150f && lat > line.halfWidth + offTrackMargin && !Race.ShortcutPath.OnAny(transform.position, 3f);
-                offTimer = off ? offTimer + Time.deltaTime : 0f;
-                if (offTimer > offTrackSeconds) { ResetNow("off track"); return; }
+                // A long jump off a bending lip carries you wide for a moment: time in the air doesn't count (it
+                // used to put a rider back mid-flight at a standstill and drop them through the pack). Only once
+                // landed off the trail, or flown a very long way out.
+                bool flying = !vehicle.AnyWheelGrounded && lat < line.halfWidth + offTrackMargin + 25f;
+                if (!off) offTimer = 0f;
+                else if (!flying) offTimer += Time.deltaTime;
+                if (offTimer > offTrackSeconds)
+                {
+                    // Keep most of the speed: a wide line costs a moment, not the race.
+                    ResetNow("off track", Mathf.Clamp(vehicle.SpeedKmh * 0.75f, 0f, 60f));
+                    return;
+                }
             }
 
             if (!hasOverride)
@@ -100,15 +110,21 @@ namespace ShiftRush.Vehicles
         /// <summary>Why the last reset happened (R key, fell, flipped, beached, off track, stuck).</summary>
         public string LastReason { get; private set; }
 
-        public void ResetNow(string why = "asked")
+        public void ResetNow(string why = "asked") { ResetNow(why, 0f); }
+
+        /// <summary>Back on the race line, rolling forward at carrySpeedKmh.</summary>
+        public void ResetNow(string why, float carrySpeedKmh)
         {
             LastReason = why;
             flippedTimer = 0f; offTimer = 0f; beachedTimer = 0f; stalledTimer = 0f;
             Vector3 pos; Quaternion rot;
             if (!OnRaceLine(out pos, out rot)) { pos = safePos; rot = safeRot; }
-            vehicle.Teleport(pos + Vector3.up * respawnLift, rot, 0f);
-            vehicle.SetControllable(false);
-            unlockAt = Time.time + controlLockSeconds;
+            vehicle.Teleport(pos + Vector3.up * respawnLift, rot, carrySpeedKmh);
+            if (carrySpeedKmh < 1f)
+            {
+                vehicle.SetControllable(false);
+                unlockAt = Time.time + controlLockSeconds;
+            }
             Respawned?.Invoke(this);
         }
 

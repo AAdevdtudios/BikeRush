@@ -7,13 +7,25 @@ EditorBuildSettings:
   m_Scenes:
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/MainMenu.unity
-    guid: c5f7a4efd66bd4e1cb9b78e7a2f57bad
+    guid: 38cdc9f8b66b04851b344885b444f6e8
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/Course_RidgeLine.unity
     guid: 0ce3bfabb37384725b1922e83460f4f5
   - enabled: 1
+    path: Assets/_ShiftRush/Scenes/Course_DustDevilGulch.unity
+    guid: 1f72aeb2c2bef4c7d81d0628d396faae
+  - enabled: 1
+    path: Assets/_ShiftRush/Scenes/Course_CutlassCove.unity
+    guid: 581b372a994c5437bbd1ee5f99aa31f2
+  - enabled: 1
     path: Assets/_ShiftRush/Scenes/Show_Cloudbreak.unity
-    guid: 04f6cb04e9bf34adf944a9b6a75d80c3
+    guid: dffa007ecfc594a0eb9bfbf35f481d7f
+  - enabled: 1
+    path: Assets/_ShiftRush/Scenes/Show_RedRockRodeo.unity
+    guid: 48828d35e642e45edb1ce28e692890a6
+  - enabled: 1
+    path: Assets/_ShiftRush/Scenes/Show_CannonballBay.unity
+    guid: 4785dd3f1fce54d3abebeeb7a2d3b713
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

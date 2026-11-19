@@ -57,5 +57,5 @@ MonoBehaviour:
   laneSpacing: 2.2
   catchUp: 0.06
   rampNitro: {x: 0.12, y: 0.22}
-  nitroSpeedGap: 2.5
+  nitroSpeedGap: 1.5
   airForBoost: 0.8

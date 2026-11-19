@@ -88,3 +88,67 @@ MonoBehaviour:
     - Hold Shift for boost on the ground. In the air, press it on the green.
     - Hold Space to crouch, let go at the lip for more air.
     - R puts you back on the trail.
+  - id: dustdevil
+    displayName: Dust Devil Gulch
+    scene: Course_DustDevilGulch
+    description: 'Down Main Street, out through the town gate and into a red canyon:
+      under Devil''s Arch, through the narrows, up the quarry switchbacks and off
+      the rim beside the old trestle.'
+    lengthKm: 1.1
+    thumbnail: {fileID: 21300000, guid: e36cc2986574c4376a2b98cd34c3a623, type: 3}
+    map: {fileID: 21300000, guid: 36e2160e4b34e4f99baf269d85794e69, type: 3}
+    loadingTips:
+    - The mesa kicker at the gate launches you down the sweeper. Land it straight
+      and keep your speed.
+    - In the narrows the kicker sits left. Take it, or keep right for the clean line.
+    - Brake before the quarry switchbacks. Three hairpins, then it's flat out along
+      the rim.
+    - The trestle drop is a lip, not a cliff. Crouch and pop it.
+    - Hold Shift for boost on the ground. In the air, press it on the green.
+    - Hold Space to crouch, let go at the lip for more air.
+    - R puts you back on the trail.
+  - id: cutlasscove
+    displayName: Cutlass Cove
+    scene: Course_CutlassCove
+    description: Off the harbour quay onto white sand, past the wreck and through
+      the sea arch, up into the jungle, along the fort's cannons and off the headland
+      into Shanty Town.
+    lengthKm: 0.9
+    thumbnail: {fileID: 21300000, guid: f1a00222750744f4aacfcc25d75c6ac6, type: 3}
+    map: {fileID: 21300000, guid: 4e9d43c1f655d4b10a3200a6c6c8cbac, type: 3}
+    loadingTips:
+    - Hop off the end of the quay onto the beach. The sand is fast.
+    - The wreck kicker sits right of the line on the beach.
+    - Up in the jungle the trail narrows under the trees. Hold your line.
+    - At the fort the headland drops away. Crouch for the lip.
+    - Hold Shift for boost on the ground. In the air, press it on the green.
+    - Hold Space to crouch, let go at the lip for more air.
+    - R puts you back on the trail.
+  shows:
+  - id: cloudbreak
+    displayName: Cloudbreak
+    scene: Show_Cloudbreak
+    description: 'A summit run at sunset above a sea of cloud: balloons, turbines
+      and a cable car across the valley, and the Summit Drop to finish.'
+    lengthKm: 0.6
+    thumbnail: {fileID: 21300000, guid: 804109cb0ebe344f88b9c5d9c7e9bd92, type: 3}
+    map: {fileID: 21300000, guid: 94c83c2b9f4b546b18de502100ce1472, type: 3}
+    loadingTips: []
+  - id: redrock
+    displayName: Red Rock Rodeo
+    scene: Show_RedRockRodeo
+    description: 'High noon on a mesa above a red canyon: the Wagon Gap, TNT Alley
+      and the Canyon Drop, with a mine cart rattling over the trestle behind you.'
+    lengthKm: 0.6
+    thumbnail: {fileID: 21300000, guid: 4f912d0d75f984d20b92a9ccafe5bb06, type: 3}
+    map: {fileID: 21300000, guid: b690afdd81c854be5a4e870c8eba9347, type: 3}
+    loadingTips: []
+  - id: cannonball
+    displayName: Cannonball Bay
+    scene: Show_CannonballBay
+    description: 'Golden hour on the cliffs above a turquoise bay: the Plank Walk,
+      the Crow''s Nest and the Cliff Dive, with pirate ships sailing past below.'
+    lengthKm: 0.5
+    thumbnail: {fileID: 21300000, guid: 8b38a5665b0774afe92c76c3a12e018a, type: 3}
+    map: {fileID: 21300000, guid: 53639f743d8f845b482105be85aab111, type: 3}
+    loadingTips: []

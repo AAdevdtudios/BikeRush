@@ -22,7 +22,54 @@ namespace ShiftRush.EditorTools
     {
         const string BikeDir = "Assets/_ShiftRush/Prefabs/Bikes/";
         const string PackDir = "Assets/Simple Bicycle Physics/Prefabs/";
-        const string RidgeLineScene = "Assets/_ShiftRush/Scenes/Course_RidgeLine.unity";
+
+        class TrailSpec
+        {
+            public string id, name, scene, description;
+            public string[] tips;
+            public System.Func<CourseBuilder.Spec> spec;
+        }
+
+        // Air Show venues on the Trails screen when the Start Gate is on AIR SHOW. Shown once built.
+        static readonly TrailSpec[] Shows =
+        {
+            new TrailSpec { id = "cloudbreak", name = "Cloudbreak", scene = "Show_Cloudbreak",
+                description = "A summit run at sunset above a sea of cloud: balloons, turbines and a cable car across the valley, and the Summit Drop to finish." },
+            new TrailSpec { id = "redrock", name = "Red Rock Rodeo", scene = "Show_RedRockRodeo",
+                description = "High noon on a mesa above a red canyon: the Wagon Gap, TNT Alley and the Canyon Drop, with a mine cart rattling over the trestle behind you." },
+            new TrailSpec { id = "cannonball", name = "Cannonball Bay", scene = "Show_CannonballBay",
+                description = "Golden hour on the cliffs above a turquoise bay: the Plank Walk, the Crow's Nest and the Cliff Dive, with pirate ships sailing past below." },
+        };
+
+        static readonly string[] CommonTips =
+        {
+            "Hold Shift for boost on the ground. In the air, press it on the green.",
+            "Hold Space to crouch, let go at the lip for more air.",
+            "R puts you back on the trail.",
+        };
+
+        // Every trail on the select screen, in order. A trail only shows once its course has been built.
+        static readonly TrailSpec[] Trails =
+        {
+            new TrailSpec
+            {
+                id = "ridgeline", name = "Ridge Line", scene = "Course_RidgeLine", spec = CourseBuilder.RidgeLine,
+                description = "A ridge trail above the pines: fast dirt, kickers, a cliff drop and boost pads that make you pick a line.",
+                tips = new[] { "The trail steers with you. Lean into the stick to pick your line.", "Boost pads sit left, middle or right. Pick your line early." },
+            },
+            new TrailSpec
+            {
+                id = "dustdevil", name = "Dust Devil Gulch", scene = "Course_DustDevilGulch", spec = CourseBuilder.DustDevilGulch,
+                description = "Down Main Street, out through the town gate and into a red canyon: under Devil's Arch, through the narrows, up the quarry switchbacks and off the rim beside the old trestle.",
+                tips = new[] { "The mesa kicker at the gate launches you down the sweeper. Land it straight and keep your speed.", "In the narrows the kicker sits left. Take it, or keep right for the clean line.", "Brake before the quarry switchbacks. Three hairpins, then it's flat out along the rim.", "The trestle drop is a lip, not a cliff. Crouch and pop it." },
+            },
+            new TrailSpec
+            {
+                id = "cutlasscove", name = "Cutlass Cove", scene = "Course_CutlassCove", spec = CourseBuilder.CutlassCove,
+                description = "Off the harbour quay onto white sand, past the wreck and through the sea arch, up into the jungle, along the fort's cannons and off the headland into Shanty Town.",
+                tips = new[] { "Hop off the end of the quay onto the beach. The sand is fast.", "The wreck kicker sits right of the line on the beach.", "Up in the jungle the trail narrows under the trees. Hold your line.", "At the fort the headland drops away. Crouch for the lip." },
+            },
+        };
 
         class BikeSpec
         {
@@ -76,21 +123,25 @@ namespace ShiftRush.EditorTools
         /// </summary>
         static RaceCatalog MakeBikeCatalog()
         {
-            var track = new RaceCatalog.Track
+            var tracks = new List<RaceCatalog.Track>();
+            foreach (var t in Trails)
             {
-                id = "ridgeline", displayName = "Ridge Line", scene = "Course_RidgeLine",
-                description = "A ridge trail above the pines: fast dirt, kickers, a cliff drop and boost pads that make you pick a line.",
-                lengthKm = 0.9f,
-                loadingTips = new[]
-                {
-                    "The trail steers with you. Lean into the stick to pick your line.",
-                    "Boost pads sit left, middle or right. Pick your line early.",
-                    "Hold Shift for boost on the ground. In the air, press it on the green.",
-                    "Hold Space to crouch, let go at the lip for more air.",
-                    "R puts you back on the trail.",
-                },
-            };
-            MakeTrailArt(track);
+                string path = "Assets/_ShiftRush/Scenes/" + t.scene + ".unity";
+                if (!File.Exists(path)) { Debug.Log("[BIKE//RUSH] " + t.name + " isn't built yet, so it's not listed. BIKE RUSH → Courses."); continue; }
+                var tips = new List<string>(t.tips); tips.AddRange(CommonTips);
+                var track = new RaceCatalog.Track { id = t.id, displayName = t.name, scene = t.scene, description = t.description, loadingTips = tips.ToArray() };
+                track.lengthKm = MakeTrailArt(path, t.id, t.spec().heroAt);
+                tracks.Add(track);
+            }
+            var shows = new List<RaceCatalog.Track>();
+            foreach (var t in Shows)
+            {
+                string path = "Assets/_ShiftRush/Scenes/" + t.scene + ".unity";
+                if (!File.Exists(path)) { Debug.Log("[BIKE//RUSH] " + t.name + " isn't built yet, so it's not listed. BIKE RUSH → Courses."); continue; }
+                var show = new RaceCatalog.Track { id = t.id, displayName = t.name, scene = t.scene, description = t.description, loadingTips = new string[0] };
+                show.lengthKm = MakeShowArt(path, t.id);
+                shows.Add(show);
+            }
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             var cat = AssetDatabase.LoadAssetAtPath<RaceCatalog>(CatalogPath);
@@ -112,10 +163,21 @@ namespace ShiftRush.EditorTools
                 });
             }
 
-            track.thumbnail = AssetDatabase.LoadAssetAtPath<Sprite>(UIArt + "T_Trail_RidgeLine.png");
-            track.map = AssetDatabase.LoadAssetAtPath<Sprite>(UIArt + "T_TrailMap_RidgeLine.png");
             cat.tracks.Clear();
-            cat.tracks.Add(track);
+            foreach (var track in tracks)
+            {
+                string key = ArtKey(track.id);
+                track.thumbnail = AssetDatabase.LoadAssetAtPath<Sprite>(UIArt + "T_Trail_" + key + ".png");
+                track.map = AssetDatabase.LoadAssetAtPath<Sprite>(UIArt + "T_TrailMap_" + key + ".png");
+                cat.tracks.Add(track);
+            }
+            cat.shows.Clear();
+            foreach (var show in shows)
+            {
+                show.thumbnail = AssetDatabase.LoadAssetAtPath<Sprite>(UIArt + "T_Show_" + show.id + ".png");
+                show.map = AssetDatabase.LoadAssetAtPath<Sprite>(UIArt + "T_ShowMap_" + show.id + ".png");
+                cat.shows.Add(show);
+            }
             EditorUtility.SetDirty(cat);
             AssetDatabase.SaveAssets();
             PlayerPrefs.SetInt("SR_LastCar", 0);
@@ -155,17 +217,24 @@ namespace ShiftRush.EditorTools
             return prefab;
         }
 
-        /// <summary>The trail card's hero shot (from the course itself) and its map (drawn from the race line).</summary>
-        static void MakeTrailArt(RaceCatalog.Track track)
-        {
-            if (!File.Exists(RidgeLineScene)) return;
-            var scene = EditorSceneManager.OpenScene(RidgeLineScene, OpenSceneMode.Single);
-            var rl = Object.FindFirstObjectByType<RaceLine>();
-            if (rl == null || rl.points == null || rl.points.Length < 2) return;
+        // Ridge Line keeps the file names it always had.
+        static string ArtKey(string id) { return id == "ridgeline" ? "RidgeLine" : id == "dustdevil" ? "DustDevilGulch" : id == "cutlasscove" ? "CutlassCove" : id; }
 
-            // Hero: low over the trail just before a boost pad, looking down the line.
+        /// <summary>
+        /// The trail card's hero shot (from the course itself) and its map (drawn from the race line). Returns the
+        /// lap length in km.
+        /// </summary>
+        static float MakeTrailArt(string scenePath, string id, float heroAt)
+        {
+            string key = ArtKey(id);
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            var rl = Object.FindFirstObjectByType<RaceLine>();
+            if (rl == null || rl.points == null || rl.points.Length < 2) return 0f;
+
+            // Hero: low over the trail at the course's chosen spot (or just before a boost pad), looking down the line.
             float at = 230f;
-            foreach (var pad in Object.FindObjectsByType<BoostPad>(FindObjectsSortMode.None)) { at = pad.distance - 16f; break; }
+            if (heroAt >= 0f) at = heroAt;
+            else foreach (var pad in Object.FindObjectsByType<BoostPad>(FindObjectsSortMode.None)) { at = pad.distance - 16f; break; }
             Vector3 eye = rl.PointAt(at) + Vector3.up * 1.7f - rl.Right(rl.IndexAt(at)) * 1.2f;
             Vector3 look = rl.PointAt(at + 26f) + Vector3.up * 0.6f;
             var camGo = new GameObject("Hero Camera");
@@ -186,7 +255,7 @@ namespace ShiftRush.EditorTools
             cam.targetTexture = null;
             Object.DestroyImmediate(camGo);
             rt.Release();
-            SaveSprite(tex, UIArt + "T_Trail_RidgeLine.png");
+            SaveSprite(tex, UIArt + "T_Trail_" + key + ".png");
 
             // Map: the race line as one clean white stroke on clear, fitted into a square.
             const int size = 512, pad2 = 36;
@@ -219,7 +288,83 @@ namespace ShiftRush.EditorTools
             for (int i = 0; i < px.Length; i++) px[i] = new Color32(255, 255, 255, (byte)(alpha[i] * 255));
             map.SetPixels32(px);
             map.Apply();
-            SaveSprite(map, UIArt + "T_TrailMap_RidgeLine.png");
+            SaveSprite(map, UIArt + "T_TrailMap_" + key + ".png");
+            return Mathf.Round(rl.length / 100f) / 10f;
+        }
+
+        /// <summary>
+        /// A venue's card art: a side-on shot like the game's camera, over the second kicker, and the course's
+        /// profile (its rises, gaps and drop) as the "map". Returns the run's length in km.
+        /// </summary>
+        static float MakeShowArt(string scenePath, string id)
+        {
+            EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            var run = Object.FindFirstObjectByType<ShiftRush.AirShow.AirShowRun>();
+            if (run == null) return 0f;
+            float finishX = new SerializedObject(run).FindProperty("finishX").floatValue;
+            var cps = new List<Vector3>();
+            foreach (Transform c in run.transform) cps.Add(c.position);
+
+            // Photo: side-on, a little above, the bike's line across the middle third.
+            var focus = cps.Count > 2 ? cps[2] + new Vector3(16f, 0f, 0f) : new Vector3(60f, 0f, 0f);
+            var camGo = new GameObject("Hero Camera");
+            var cam = camGo.AddComponent<Camera>();
+            cam.fieldOfView = 40f; cam.nearClipPlane = 0.3f; cam.farClipPlane = 2400f;
+            camGo.transform.SetPositionAndRotation(focus + new Vector3(0f, 6f, -26f), Quaternion.Euler(9f, 0f, 0f));
+            var data = camGo.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+            data.renderPostProcessing = true;
+            const int w = 1600, h = 900;
+            var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32);
+            cam.targetTexture = rt;
+            cam.Render();
+            RenderTexture.active = rt;
+            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            tex.Apply();
+            RenderTexture.active = null;
+            cam.targetTexture = null;
+            Object.DestroyImmediate(camGo);
+            rt.Release();
+            SaveSprite(tex, UIArt + "T_Show_" + id + ".png");
+
+            // Profile: the ground height along the run, as one white stroke.
+            float x0 = -40f, x1 = finishX + 10f;
+            var pts = new List<Vector2>();
+            for (float x = x0; x <= x1; x += 1f)
+                if (Physics.Raycast(new Vector3(x, 200f, 0f), Vector3.down, out var hit, 400f, ~0, QueryTriggerInteraction.Ignore))
+                    pts.Add(new Vector2(x, hit.point.y));
+            const int size = 512, pad = 36;
+            var alpha = new float[size * size];
+            if (pts.Count > 1)
+            {
+                Vector2 min = pts[0], max = pts[0];
+                foreach (var p in pts) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
+                float scale = (size - pad * 2) / Mathf.Max(max.x - min.x, (max.y - min.y) * 4f);
+                Vector2 offset = new Vector2(size, size) * 0.5f - new Vector2((min.x + max.x) * 0.5f * scale, (min.y + max.y) * 0.5f * scale * 4f);
+                for (int i = 0; i < pts.Count - 1; i++)
+                {
+                    Vector2 a = new Vector2(pts[i].x * scale, pts[i].y * scale * 4f) + offset, b = new Vector2(pts[i + 1].x * scale, pts[i + 1].y * scale * 4f) + offset;
+                    int steps = Mathf.CeilToInt(Vector2.Distance(a, b)) + 1;
+                    for (int st = 0; st <= steps; st++)
+                    {
+                        Vector2 c = Vector2.Lerp(a, b, st / (float)steps);
+                        for (int dy = -5; dy <= 5; dy++)
+                            for (int dx = -5; dx <= 5; dx++)
+                            {
+                                int px = Mathf.RoundToInt(c.x) + dx, py = Mathf.RoundToInt(c.y) + dy;
+                                if (px < 0 || py < 0 || px >= size || py >= size) continue;
+                                alpha[py * size + px] = Mathf.Max(alpha[py * size + px], Mathf.Clamp01(4.5f - Mathf.Sqrt(dx * dx + dy * dy)));
+                            }
+                    }
+                }
+            }
+            var map = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            var px32 = new Color32[size * size];
+            for (int i = 0; i < px32.Length; i++) px32[i] = new Color32(255, 255, 255, (byte)(alpha[i] * 255));
+            map.SetPixels32(px32);
+            map.Apply();
+            SaveSprite(map, UIArt + "T_ShowMap_" + id + ".png");
+            return Mathf.Round((finishX + 20f) / 100f) / 10f;
         }
 
         // ------------------------------------------------------------------ tune

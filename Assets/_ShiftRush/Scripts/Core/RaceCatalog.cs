@@ -73,6 +73,11 @@ namespace ShiftRush.Core
 
         public List<Car> cars = new List<Car>();
         public List<Track> tracks = new List<Track>();
+        [Tooltip("Air Show venues: side-on stunt courses, picked instead of a trail when the Start Gate is on AIR SHOW.")]
+        public List<Track> shows = new List<Track>();
+
+        /// <summary>The list the Trails screen offers for a mode: venues for Air Show, trails for the rest.</summary>
+        public List<Track> ListFor(RideMode mode) { return mode == RideMode.AirShow ? shows : tracks; }
 
         /// <summary>The catalog car a spawned car was made from (matched by prefab name), or null.</summary>
         public Car FindCar(GameObject instance)
@@ -113,6 +118,13 @@ namespace ShiftRush.Core
         {
             get { return Mathf.Clamp(PlayerPrefs.GetInt(TrackKey, 0), 0, Mathf.Max(0, TrackCount - 1)); }
             set { PlayerPrefs.SetInt(TrackKey, value); }
+        }
+
+        /// <summary>The Air Show venue last picked.</summary>
+        public static int ShowIndex
+        {
+            get { var c = RaceCatalog.Instance; int n = c != null ? c.shows.Count : 0; return Mathf.Clamp(PlayerPrefs.GetInt("BR_ShowIndex", 0), 0, Mathf.Max(0, n - 1)); }
+            set { PlayerPrefs.SetInt("BR_ShowIndex", value); }
         }
 
         /// <summary>Picked at the Start Gate. Pack Race until the player picks something else.</summary>

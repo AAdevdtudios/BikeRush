@@ -44,23 +44,51 @@ namespace ShiftRush.UI
 
         readonly List<TrackCard> cards = new List<TrackCard>();
         int index;
+        bool built, builtForShow;
+        TMP_Text headerText, stepText;
+
+        // Trails for a race or a ghost run; Air Show venues when the Start Gate is on AIR SHOW.
+        static bool ShowMode { get { return RaceSession.Mode == RideMode.AirShow; } }
+        static List<RaceCatalog.Track> Items
+        {
+            get { var c = RaceCatalog.Instance; return c == null ? new List<RaceCatalog.Track>() : c.ListFor(RaceSession.Mode); }
+        }
 
         void Start()
         {
-            var cat = RaceCatalog.Instance;
-            if (cat == null || cardTemplate == null) return;
-            for (int i = 0; i < cat.tracks.Count; i++)
+            if (visibleGroup != null)
+                foreach (var t in visibleGroup.GetComponentsInChildren<TMP_Text>(true))
+                {
+                    if (t.name == "Header" && headerText == null) headerText = t;
+                    else if (t.name == "Step" && stepText == null) stepText = t;
+                }
+            if (difficultyDown) difficultyDown.onClick.AddListener(() => StepDifficulty(-1));
+            if (difficultyUp) difficultyUp.onClick.AddListener(() => StepDifficulty(1));
+            Build();
+            ShowDifficulty();
+        }
+
+        /// <summary>One card per trail (or venue), rebuilt whenever the mode switches between the two.</summary>
+        void Build()
+        {
+            foreach (var c in cards) if (c != null) Destroy(c.gameObject);
+            cards.Clear();
+            built = true; builtForShow = ShowMode;
+            if (cardTemplate == null) return;
+            var items = Items;
+            for (int i = 0; i < items.Count; i++)
             {
                 var card = Instantiate(cardTemplate, cardParent);
                 card.gameObject.SetActive(true);
-                card.Bind(this, i, cat.tracks[i]);
+                card.Bind(this, i, items[i]);
                 cards.Add(card);
             }
-            index = RaceSession.TrackIndex;
-            if (difficultyDown) difficultyDown.onClick.AddListener(() => StepDifficulty(-1));
-            if (difficultyUp) difficultyUp.onClick.AddListener(() => StepDifficulty(1));
+            index = builtForShow ? RaceSession.ShowIndex : RaceSession.TrackIndex;
+            if (headerText) headerText.text = builtForShow ? "VENUES" : "TRAILS";
+            if (stepText) stepText.text = builtForShow ? "STEP 4 / 4   CHOOSE A VENUE" : "STEP 4 / 4   CHOOSE A TRAIL";
+            heroAlpha = 0f;
+            if (hero) hero.sprite = null;
             Refresh();
-            ShowDifficulty();
         }
 
         bool Accepting { get { return visibleGroup == null || (visibleGroup.alpha > 0.95f && visibleGroup.interactable); } }
@@ -84,6 +112,7 @@ namespace ShiftRush.UI
 
         void Update()
         {
+            if (built && builtForShow != ShowMode) Build();
             if (!Accepting || SceneLoader.IsLoading) return;
             if (MenuInput.Left) Select(index - 1, true);
             else if (MenuInput.Right) Select(index + 1, true);
@@ -98,7 +127,7 @@ namespace ShiftRush.UI
             i = (i + cards.Count) % cards.Count;
             if (i == index) return;
             index = i;
-            RaceSession.TrackIndex = i;
+            if (builtForShow) RaceSession.ShowIndex = i; else RaceSession.TrackIndex = i;
             if (sound) MenuSounds.Shift();
             Refresh();
         }
@@ -106,12 +135,20 @@ namespace ShiftRush.UI
         public void Go(int i)
         {
             if (!Accepting || SceneLoader.IsLoading) return;
-            var cat = RaceCatalog.Instance;
-            if (cat == null || i < 0 || i >= cat.tracks.Count) return;
+            var items = Items;
+            if (i < 0 || i >= items.Count) return;
             index = i;
-            RaceSession.TrackIndex = i;
             MenuSounds.Confirm();
-            SceneLoader.LoadTrack(cat.tracks[i]);
+            if (ShowMode)
+            {
+                RaceSession.ShowIndex = i;
+                var t = items[i];
+                var car = RaceSession.Car;
+                SceneLoader.Load(t.scene, t.displayName.ToUpperInvariant(), (car != null ? car.displayName.ToUpperInvariant() + "  //  " : "") + "AIR SHOW", RideModes.AirShowTip(), t.thumbnail);
+                return;
+            }
+            RaceSession.TrackIndex = i;
+            SceneLoader.LoadTrack(items[i]);
         }
 
         /// <summary>Up a level (+1) or down (-1), clamped: CRUISE, RUSH, OVERDRIVE.</summary>
@@ -154,9 +191,9 @@ namespace ShiftRush.UI
 
         void Refresh()
         {
-            var cat = RaceCatalog.Instance;
-            if (cat == null || cat.tracks.Count == 0) return;
-            var t = cat.tracks[Mathf.Clamp(index, 0, cat.tracks.Count - 1)];
+            var items = Items;
+            if (items.Count == 0) return;
+            var t = items[Mathf.Clamp(index, 0, items.Count - 1)];
             if (title) title.text = t.displayName.ToUpperInvariant();
             if (description) description.text = t.description;
             if (details) details.text = t.LengthLabel;

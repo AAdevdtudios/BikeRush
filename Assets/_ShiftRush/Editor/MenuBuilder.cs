@@ -1484,9 +1484,14 @@ namespace ShiftRush.EditorTools
                     string p = "Assets/_ShiftRush/Scenes/" + t.scene + ".unity";
                     if (AssetDatabase.LoadAssetAtPath<SceneAsset>(p) != null) list.Add(new EditorBuildSettingsScene(p, true));
                 }
-            // The Air Show venue (loaded straight from the Start Gate, not listed as a trail).
-            string show = "Assets/_ShiftRush/Scenes/" + RideModes.AirShowScene + ".unity";
-            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(show) != null) list.Add(new EditorBuildSettingsScene(show, true));
+            // The Air Show venues.
+            var showScenes = new List<string> { RideModes.AirShowScene };
+            if (cat != null) foreach (var t in cat.shows) if (!showScenes.Contains(t.scene)) showScenes.Add(t.scene);
+            foreach (var sc in showScenes)
+            {
+                string show = "Assets/_ShiftRush/Scenes/" + sc + ".unity";
+                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(show) != null) list.Add(new EditorBuildSettingsScene(show, true));
+            }
             EditorBuildSettings.scenes = list.ToArray();
         }
 

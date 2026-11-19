@@ -119,6 +119,8 @@ namespace ShiftRush.Race
             if (isPlayer) Player = r;
             // Nitro is earned from SHIFT ramps in a race: start empty, no regeneration.
             if (vehicle is INitroTank tank) { tank.SetRegeneration(true); tank.SetNitro(StartBoost); } // boost refills by itself; stunts top it up faster
+            // Difficulty decides how fast your boost comes back: quick on CRUISE, slow on OVERDRIVE.
+            if (isPlayer && vehicle is BikeVehicleAdapter bike) bike.RegenScale = Core.Difficulty.Current.boostRefill;
             if (CurrentState == State.Countdown) vehicle.SetControllable(false);
             return r;
         }
@@ -275,6 +277,29 @@ namespace ShiftRush.Race
                 if (Mathf.Abs(Vector3.Dot(p - gate.position, right)) > gate.halfWidth) continue;
                 if (g != r.nextGate) continue;
                 Crossed(r, g);
+            }
+
+            // A checkpoint passed wide or in the air (outside its width) never sees a crossing, and the racer
+            // would then look a whole lap behind until the next lap: anyone with a big lead dropped to last. So a
+            // checkpoint clearly ridden past along the line counts too, and so does the lap line once well into
+            // the new lap.
+            if (r.started && gateDistance != null && !r.finished)
+            {
+                float along = Line.distances[r.nearest];
+                if (r.nextGate != 0)
+                {
+                    float past = along - gateDistance[r.nextGate];
+                    if (past > 15f && past < Line.length * 0.3f)
+                    {
+                        if (r.isPlayer) Debug.Log("[BIKE//RUSH] Checkpoint " + r.nextGate + " missed by its gate, counted by distance.");
+                        r.nextGate = (r.nextGate + 1) % Line.gates.Length;
+                    }
+                }
+                else if (along > 15f && along < Line.length * 0.25f)
+                {
+                    if (r.isPlayer) Debug.Log("[BIKE//RUSH] Lap line missed by its gate, counted by distance.");
+                    Crossed(r, 0);
+                }
             }
 
             // After the gates, so a lap counted this frame is already in the lap number.
