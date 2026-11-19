@@ -1,6 +1,8 @@
 # BIKE//RUSH
 
-An arcade bicycle racer for **GitHub Game Off 2026** (theme: **SHIFT**) by **Razorbill Studio**. Working title.
+An arcade bicycle racer for **GitHub Game Off 2026** (theme: **SHIFT**) by **Razorbill Studio**.
+
+**Play it:** https://thejoke.itch.io/bike-rush
 
 Race down dirt trails against five rivals. Hit a jump and time slows down. A diamond closes in: press **Shift** when it turns green and the rider throws a stunt. Land it and you get boost.
 
@@ -71,4 +73,4 @@ Without the packs, the project's own code is still public and readable, but scen
   - "Trap Dynamic Brass Thunder Power" by alexzavesa from Pixabay
   - "Dance Funk" by roybushband from Pixabay
 
-No AI-generated art, music or sound is used in the game. The menu and card art is drawn in code. The game code was written with help from an AI coding assistant (Claude).
+An AI assistant (Claude) helped write the game code, the menu and card art (drawn in code) and the store page text. The 3D models, music and sound come from the credited packs and artists and are not AI-generated.

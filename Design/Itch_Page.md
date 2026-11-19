@@ -131,9 +131,11 @@ Built with Unity 6 (URP).
 
 ## AI disclosure
 
-No AI-generated art, music or sound is used in the game. The menu and card art is drawn in code. The 3D models come from the packs listed above.
+An AI assistant (Claude) helped write the game code, the menu and card art (drawn in code) and the text on this page.
 
-The game code was written with help from an AI coding assistant (Claude).
+The 3D models, music and sound come from the credited packs and artists listed above. None of them are AI-generated.
+
+Jam form answers: AI used for code, art and writing. Extent: Some.
 
 ## Source code
 
