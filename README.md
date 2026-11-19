@@ -2,9 +2,11 @@
 
 An arcade bicycle racer for **GitHub Game Off 2026** (theme: **SHIFT**) by **Razorbill Studio**. Working title.
 
-Race down mountain roads and forest trails. Off a big jump, time slows and a diamond closes in: press **Shift** as it hits the green and the rider throws a stunt sized to the height left. Room for another and the diamond comes back; chain them all the way down for a burst of boost. Some jumps have a glowing **SHIFT portal** over them: fly through and you're sent to another world for a few seconds, then dropped back into the race ahead of where you left.
+Race down dirt trails against five rivals. Hit a jump and time slows down. A diamond closes in: press **Shift** when it turns green and the rider throws a stunt. Land it and you get boost.
 
-**Pedal → Launch → Trick → Land → Boost → Portal → back in the race.**
+Three modes (Pack Race, Ghost Run, Air Show), three trails (Ridge Line, Dust Devil, Cutlass Cove), three Air Show venues (Cloudbreak, Red Rock, Cannon Bay) and three difficulties (Cruise, Rush, Overdrive).
+
+**Pedal, launch, stunt, land, boost.**
 
 ## Controls
 
@@ -14,7 +16,7 @@ Race down mountain roads and forest trails. Off a big jump, time slows and a dia
 | S / Left trigger | Brake, then reverse |
 | A D / Left stick | Steer and lean |
 | Space (hold, then release) | Bunny hop |
-| Left Shift | Boost on the ground; in the air, the stunt press |
+| Left Shift | On the ground: boost. In the air: stunt |
 | R | Reset |
 | Esc | Pause |
 
@@ -36,6 +38,11 @@ The game uses these paid packs. Their licences don't allow the source files to b
 | Heat – Complete Modern UI (Michsky) | Unity Asset Store | Menus and settings UI |
 | AMS UI Soft Mask | Unity Asset Store | Soft UI masks |
 | UI SFX Mega Pack | Unity Asset Store | Menu sounds |
+| POLYGON Nature Biomes: Alpine Mountain (Synty) | Synty Store / Asset Store | Ridge Line, Cloudbreak |
+| POLYGON Nature Biomes: Arid Desert (Synty) | Synty Store / Asset Store | Dust Devil, Red Rock |
+| POLYGON Western Frontier (Synty) | Synty Store / Asset Store | Dust Devil, Red Rock |
+| POLYGON Pirate Pack (Synty) | Synty Store / Asset Store | Cutlass Cove, Cannon Bay |
+| POLYGON Generic (Synty) | Synty Store / Asset Store | Shared props |
 
 Also required from Unity's registry: **Animation Rigging** (installed through `Packages/manifest.json`).
 
@@ -57,10 +64,11 @@ Without the packs, the project's own code is still public and readable, but scen
 - **Razorbill Studio**: design, code, level design
 - **Concept & Inspiration:** Jennifer Ugwoke
 - Third-party packs as listed above
-- **Music** (Pixabay Content License; the audio files themselves are not in this repo):
+- **Fonts**: Black Ops One and Rubik Dirt (SIL OFL 1.1), Permanent Marker (Apache 2.0)
+- **Music** (Pixabay Content License. The audio files are not in this repo):
   - Music by [OctoSound](https://pixabay.com/users/octosound-39205072/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=178816) from [Pixabay](https://pixabay.com/music//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=178816)
   - Music by [Andrii Poradovskyi](https://pixabay.com/users/lnplusmusic-47631836/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=628850) from [Pixabay](https://pixabay.com//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=628850)
   - "Trap Dynamic Brass Thunder Power" by alexzavesa from Pixabay
   - "Dance Funk" by roybushband from Pixabay
 
-Any AI-generated art or audio used in the game will be listed here.
+No AI-generated art, music or sound is used in the game. The menu and card art is drawn in code. The game code was written with help from an AI coding assistant (Claude).

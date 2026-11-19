@@ -38,10 +38,23 @@ MonoBehaviour:
     headerTitleKey: 
     items:
     - Simple Bicycle Physics
-    - POLYGON Nature Biomes (Synty)
     - 'Heat: Complete Modern UI (Michsky)'
     - UI Soft Mask (AMS)
     - UI SFX Mega Pack
+  - headerTitle: Environments (Synty Studios)
+    headerTitleKey: 
+    items:
+    - 'POLYGON Nature Biomes: Alpine Mountain'
+    - 'POLYGON Nature Biomes: Arid Desert'
+    - POLYGON Western Frontier
+    - POLYGON Pirate Pack
+    - POLYGON Generic
+  - headerTitle: Fonts
+    headerTitleKey: 
+    items:
+    - Black Ops One (SIL OFL 1.1)
+    - Rubik Dirt (SIL OFL 1.1)
+    - Permanent Marker (Apache 2.0)
   - headerTitle: Music
     headerTitleKey: 
     items:

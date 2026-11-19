@@ -326,10 +326,23 @@ namespace ShiftRush.EditorTools
             add("Third-party packs", new[]
             {
                 "Simple Bicycle Physics",
-                "POLYGON Nature Biomes (Synty)",
                 "Heat: Complete Modern UI (Michsky)",
                 "UI Soft Mask (AMS)",
                 "UI SFX Mega Pack",
+            });
+            add("Environments (Synty Studios)", new[]
+            {
+                "POLYGON Nature Biomes: Alpine Mountain",
+                "POLYGON Nature Biomes: Arid Desert",
+                "POLYGON Western Frontier",
+                "POLYGON Pirate Pack",
+                "POLYGON Generic",
+            });
+            add("Fonts", new[]
+            {
+                "Black Ops One (SIL OFL 1.1)",
+                "Rubik Dirt (SIL OFL 1.1)",
+                "Permanent Marker (Apache 2.0)",
             });
             add("Music", new[]
             {
