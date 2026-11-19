@@ -73,4 +73,4 @@ Without the packs, the project's own code is still public and readable, but scen
   - "Trap Dynamic Brass Thunder Power" by alexzavesa from Pixabay
   - "Dance Funk" by roybushband from Pixabay
 
-An AI assistant (Claude) helped write the game code, the menu and card art (drawn in code) and the store page text. The 3D models, music and sound come from the credited packs and artists and are not AI-generated.
+An AI assistant (Claude) helped write the game code, the menu and card art (drawn in code) and the store page text. The Razorbill Studio intro video and its sound were made with Higgsfield AI from the studio logo. The in-game 3D models, music and sound effects come from the credited packs and artists and are not AI-generated.

@@ -90,7 +90,7 @@ This is a jam build. These are the problems we know about:
 - **"TOO EARLY" shows up a lot.** The stunt timing window is tight. Wait for the diamond to turn fully green.
 - **You can get stuck on props.** Crates, rocks and fences can stop the bike dead. Press R to get back on the trail.
 - **Big jumps can reset you.** If you fly far off the trail, the game may put you back on it and you can lose places.
-- **The first load is slow.** The game is about 77 MB. Later loads use the browser cache.
+- **The first load is slow.** The game is about 82 MB. Later loads use the browser cache.
 - **Desktop browsers only.** There are no touch controls. Chrome and Edge run it best.
 - **Balance is not final.** Difficulty and boost refill speeds may change after the jam.
 
@@ -133,9 +133,11 @@ Built with Unity 6 (URP).
 
 An AI assistant (Claude) helped write the game code, the menu and card art (drawn in code) and the text on this page.
 
-The 3D models, music and sound come from the credited packs and artists listed above. None of them are AI-generated.
+The Razorbill Studio intro video and its sound were made with Higgsfield AI from our own studio logo.
 
-Jam form answers: AI used for code, art and writing. Extent: Some.
+The in-game 3D models, music and sound effects come from the credited packs and artists listed above. None of them are AI-generated.
+
+Jam form answers: AI used for code, art, music/sound and writing. Extent: Some.
 
 ## Source code
 
