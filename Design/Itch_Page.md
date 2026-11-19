@@ -86,8 +86,8 @@ You can rebind every control in Settings, Controls.
 
 This is a jam build. These are the problems we know about:
 
-- **Stunts and flips may not look or score right.** The bike levels itself in the air, so a flip can look short, land at an odd angle, or not match the stunt you pressed for.
-- **"TOO EARLY" shows up a lot.** The stunt timing window is tight. Wait for the diamond to turn fully green.
+- **You don't choose the stunt.** The game picks it from how much air you have left, so it may not be the one you expect.
+- **Stunt timing takes a moment to learn.** Wait for the diamond to turn green, then press Shift. A boost tap right after take-off doesn't count against you.
 - **You can get stuck on props.** Crates, rocks and fences can stop the bike dead. Press R to get back on the trail.
 - **Big jumps can reset you.** If you fly far off the trail, the game may put you back on it and you can lose places.
 - **The first load is slow.** The game is about 82 MB. Later loads use the browser cache.

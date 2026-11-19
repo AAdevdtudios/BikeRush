@@ -54,12 +54,16 @@ namespace ShiftRush.Stunts
         [Tooltip("Real seconds the diamond takes to close from start to end size.")]
         [SerializeField] float promptSeconds = 0.9f;
         [SerializeField, Range(0.05f, 1f)] float slowMotion = 0.25f;
-        [SerializeField] float startScale = 3f;
+        [SerializeField] float startScale = 2.4f; // was 3: a slower close gives a wider window in real time
         [SerializeField] float endScale = 0.4f;
         [Tooltip("How far from the target size (1) a press still lands the stunt; scaled by the difficulty's SHIFT window.")]
-        [SerializeField] float window = 0.22f;
+        [SerializeField] float window = 0.3f;
         [Tooltip("How far from the target size a press is PERFECT.")]
-        [SerializeField] float perfectBand = 0.08f;
+        [SerializeField] float perfectBand = 0.1f;
+        [Tooltip("Extra room on the late side: browsers and screens add a little lag between what you see and your press.")]
+        [SerializeField] float lateSlack = 1.25f;
+        [Tooltip("Share of the prompt at the start where a press is ignored, not failed. Shift is also boost, and a boost tap carried off the ramp shouldn't end the chain before the diamond is anywhere near.")]
+        [SerializeField, Range(0f, 0.6f)] float ignoreFirst = 0.35f;
 
         [Header("Riding it out")]
         [Tooltip("How quickly the bike levels to the ground below it between stunts.")]
@@ -192,9 +196,9 @@ namespace ShiftRush.Stunts
                     promptT += Time.unscaledDeltaTime;
                     Beats();
                     float miss = Mathf.Abs(PromptScale() - 1f), shiftWindow = Difficulty.Current.shiftWindow;
-                    if (pressAction != null && pressAction.WasPressedThisFrame())
+                    if (pressAction != null && pressAction.WasPressedThisFrame() && promptT >= PromptLen * ignoreFirst)
                     {
-                        if (miss <= Window) StartTrick(miss <= perfectBand * shiftWindow * (lesson ? lessonWindow : 1f));
+                        if (InWindow()) StartTrick(miss <= perfectBand * shiftWindow * (lesson ? lessonWindow : 1f));
                         else if (PromptScale() > 1f) Miss("TOO EARLY");
                         else Miss("TOO LATE");
                     }
@@ -360,6 +364,13 @@ namespace ShiftRush.Stunts
         float PromptGameSeconds() { return PromptLen * slowMotion; }
         float PromptScale() { return Mathf.Lerp(startScale, endScale, promptT / PromptLen); }
         float Window { get { return window * Difficulty.Current.shiftWindow * (lesson ? lessonWindow : 1f); } }
+        // The one rule for "on the green", used by both the judge and the HUD so they can never disagree.
+        // The diamond shrinks: above 1 is early, below 1 is late, and late gets a little extra room.
+        bool InWindow()
+        {
+            float d = PromptScale() - 1f;
+            return d >= 0f ? d <= Window : -d <= Window * lateSlack;
+        }
         // Share of the prompt at which the closing diamond exactly fills the target (the perfect moment).
         float PerfectAt { get { return (startScale - 1f) / (startScale - endScale); } }
 
@@ -486,7 +497,7 @@ namespace ShiftRush.Stunts
 
             float scale = PromptScale();
             float off = Mathf.Abs(scale - 1f);
-            bool inside = off <= Window;
+            bool inside = InWindow();
             // The one cue: the target fills up as the diamond closes in, and turns green in the window.
             if (fillDiamond != null)
             {

@@ -616,10 +616,10 @@ MonoBehaviour:
   landMargin: 0.3
   promptSeconds: 0.9
   slowMotion: 0.25
-  startScale: 3
+  startScale: 2.4
   endScale: 0.4
-  window: 0.22
-  perfectBand: 0.08
+  window: 0.3
+  perfectBand: 0.1
   levelFollow: 8
   chainStep: 0.25
   perfectMult: 1.5
