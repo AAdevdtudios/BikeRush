@@ -31,8 +31,8 @@ namespace ShiftRush.Vehicles
         UnityEngine.Rendering.Universal.MotionBlur blur;
 
         [Header("Post")]
-        [Tooltip("Camera motion blur at top speed (0..1). Most of the sense of speed at 70+ km/h.")]
-        [SerializeField] float blurAtSpeed = 0.55f;
+        [Tooltip("Camera motion blur at top speed (0..1): just a hint, the shake and speed lines do the rest.")]
+        [SerializeField] float blurAtSpeed = 0.18f;
         [SerializeField] float bloom = 0.7f;
         float lineDebt;
         BicycleCamera chase;
@@ -110,7 +110,7 @@ namespace ShiftRush.Vehicles
             var profile = ScriptableObject.CreateInstance<UnityEngine.Rendering.VolumeProfile>();
             blur = profile.Add<UnityEngine.Rendering.Universal.MotionBlur>(true);
             blur.intensity.value = 0f;
-            blur.clamp.value = 0.06f;
+            blur.clamp.value = 0.03f;
             blur.quality.value = UnityEngine.Rendering.Universal.MotionBlurQuality.Medium;
             var b = profile.Add<UnityEngine.Rendering.Universal.Bloom>(true);
             b.intensity.value = bloom;
@@ -194,7 +194,7 @@ namespace ShiftRush.Vehicles
             fov = Mathf.Lerp(fov, want, 1f - Mathf.Exp(-4f * Time.unscaledDeltaTime));
             cam.fieldOfView = fov;
             EmitLines(kmh, boosting);
-            if (blur != null) blur.intensity.value = blurAtSpeed * Mathf.InverseLerp(30f, fastKmh, kmh) * (boosting ? 1.25f : 1f);
+            if (blur != null) blur.intensity.value = blurAtSpeed * Mathf.InverseLerp(45f, fastKmh, kmh) * (boosting ? 1.15f : 1f);
 
             if (Time.timeScale > 0.9f && t > 0.4f)
             {
