@@ -620,6 +620,8 @@ MonoBehaviour:
   endScale: 0.4
   window: 0.3
   perfectBand: 0.1
+  lateSlack: 1.25
+  ignoreFirst: 0.35
   levelFollow: 8
   chainStep: 0.25
   perfectMult: 1.5

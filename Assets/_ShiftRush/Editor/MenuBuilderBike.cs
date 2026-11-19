@@ -69,6 +69,12 @@ namespace ShiftRush.EditorTools
                 description = "Off the harbour quay onto white sand, past the wreck and through the sea arch, up into the jungle, along the fort's cannons and off the headland into Shanty Town.",
                 tips = new[] { "Hop off the end of the quay onto the beach. The sand is fast.", "The wreck kicker sits right of the line on the beach.", "Up in the jungle the trail narrows under the trees. Hold your line.", "At the fort the headland drops away. Crouch for the lip." },
             },
+            new TrailSpec
+            {
+                id = "frostlight", name = "Frostlight", scene = "Course_Frostlight", spec = CourseBuilder.Frostlight,
+                description = "The Christmas trail. Out of a lit-up village under the candy cane gate, across the frozen lake, up through the lantern forest, off the Sleigh Jump, through the toy workshop and along the ridge under the northern lights.",
+                tips = new[] { "The ice road is flat and fast. Line up for the jetty kicker at the far shore.", "The forest kicker sits right on the climb. Take it for boost.", "The Sleigh Jump is the big one. Room for a stunt chain, so watch for the diamond.", "Three switchbacks drop you back into the village. Brake before each candy cane." },
+            },
         };
 
         class BikeSpec
@@ -218,7 +224,7 @@ namespace ShiftRush.EditorTools
         }
 
         // Ridge Line keeps the file names it always had.
-        static string ArtKey(string id) { return id == "ridgeline" ? "RidgeLine" : id == "dustdevil" ? "DustDevilGulch" : id == "cutlasscove" ? "CutlassCove" : id; }
+        static string ArtKey(string id) { return id == "ridgeline" ? "RidgeLine" : id == "dustdevil" ? "DustDevilGulch" : id == "cutlasscove" ? "CutlassCove" : id == "frostlight" ? "Frostlight" : id; }
 
         /// <summary>
         /// The trail card's hero shot (from the course itself) and its map (drawn from the race line). Returns the

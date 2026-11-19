@@ -124,6 +124,23 @@ MonoBehaviour:
     - Hold Shift for boost on the ground. In the air, press it on the green.
     - Hold Space to crouch, let go at the lip for more air.
     - R puts you back on the trail.
+  - id: frostlight
+    displayName: Frostlight
+    scene: Course_Frostlight
+    description: The Christmas trail. Out of a lit-up village under the candy cane
+      gate, across the frozen lake, up through the lantern forest, off the Sleigh
+      Jump, through the toy workshop and along the ridge under the northern lights.
+    lengthKm: 1.1
+    thumbnail: {fileID: 21300000, guid: f22f2e38820e747d99b0b6e9a160463c, type: 3}
+    map: {fileID: 21300000, guid: 06c173b17e44e469aae84ad2e2640c73, type: 3}
+    loadingTips:
+    - The ice road is flat and fast. Line up for the jetty kicker at the far shore.
+    - The forest kicker sits right on the climb. Take it for boost.
+    - The Sleigh Jump is the big one. Room for a stunt chain, so watch for the diamond.
+    - Three switchbacks drop you back into the village. Brake before each candy cane.
+    - Hold Shift for boost on the ground. In the air, press it on the green.
+    - Hold Space to crouch, let go at the lip for more air.
+    - R puts you back on the trail.
   shows:
   - id: cloudbreak
     displayName: Cloudbreak

@@ -26,6 +26,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/Show_CannonballBay.unity
     guid: 4785dd3f1fce54d3abebeeb7a2d3b713
+  - enabled: 1
+    path: Assets/_ShiftRush/Scenes/Course_Frostlight.unity
+    guid: bf0fee426fa9440d7be4b71e6c8cadcb
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
