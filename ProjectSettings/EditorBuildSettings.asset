@@ -7,28 +7,28 @@ EditorBuildSettings:
   m_Scenes:
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/MainMenu.unity
-    guid: 38cdc9f8b66b04851b344885b444f6e8
+    guid: 2ce966a1ff91d48059fa4ea8e141a5fd
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/Course_RidgeLine.unity
-    guid: 0ce3bfabb37384725b1922e83460f4f5
+    guid: 24bb84eb2f301418c9ca38e5b52dfcb3
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/Course_DustDevilGulch.unity
-    guid: 1f72aeb2c2bef4c7d81d0628d396faae
+    guid: 5be4aaf4653a5497d903326c4fbf4483
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/Course_CutlassCove.unity
     guid: 581b372a994c5437bbd1ee5f99aa31f2
   - enabled: 1
+    path: Assets/_ShiftRush/Scenes/Course_Frostlight.unity
+    guid: bb42d9a5e513b4e778a8f6098999427b
+  - enabled: 1
     path: Assets/_ShiftRush/Scenes/Show_Cloudbreak.unity
-    guid: dffa007ecfc594a0eb9bfbf35f481d7f
+    guid: 3271f4b4c5090496e89fc45e7c6aa492
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/Show_RedRockRodeo.unity
-    guid: 48828d35e642e45edb1ce28e692890a6
+    guid: cbdda6a25d435451aac142ca6af1f277
   - enabled: 1
     path: Assets/_ShiftRush/Scenes/Show_CannonballBay.unity
-    guid: 4785dd3f1fce54d3abebeeb7a2d3b713
-  - enabled: 1
-    path: Assets/_ShiftRush/Scenes/Course_Frostlight.unity
-    guid: bf0fee426fa9440d7be4b71e6c8cadcb
+    guid: 7458ca54415d14188976a2b171943594
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

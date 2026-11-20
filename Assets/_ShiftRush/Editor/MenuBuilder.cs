@@ -901,26 +901,27 @@ namespace ShiftRush.EditorTools
             Place(details.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(128, 200), new Vector2(400, 40));
 
             // Right column: the car you picked in the garage (a picture, not the live model), then the circuit.
-            var carBox = SidePanel(content, "Your Bike", "YOUR BIKE", -110f, 220f);
+            var carBox = SidePanel(content, "Your Bike", "YOUR BIKE", -100f, 160f);
             var carPic = Img(carBox, "Car Picture", null, Color.white);
             carPic.raycastTarget = false; carPic.preserveAspect = true;
             Place(carPic.rectTransform, new Vector2(0, 0), new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -6), new Vector2(-40, -44));
             var carName = Txt(carBox, "Bike Name", "SWITCHBACK", fontTitle, 34, Color.white, TextAlignmentOptions.BottomRight);
             Place(carName.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 0), new Vector2(-34, 12), new Vector2(-60, 44));
-            var mapBox = SidePanel(content, "Trail Map", "TRAIL MAP", -360f, 280f);
+            var mapBox = SidePanel(content, "Trail Map", "TRAIL MAP", -275f, 190f);
             var mapImg = Img(mapBox, "Circuit Line", null, new Color(0.66f, 0.68f, 0.74f, 0.75f)); // grey line
             mapImg.raycastTarget = false; mapImg.preserveAspect = true;
-            Place(mapImg.rectTransform, new Vector2(0, 0), new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -12), new Vector2(-110, -84));
+            Place(mapImg.rectTransform, new Vector2(0, 0), new Vector2(1, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -10), new Vector2(-110, -70));
 
-            // Difficulty, under the circuit: arrows round the level's name, three pips, and what it means.
-            var diffBox = SidePanel(content, "Difficulty", "DIFFICULTY", -660f, 170f);
+            // Difficulty, under the circuit: arrows round the level's name, three pips, and what it means. The column is
+            // kept short so it ends above the card row: with four trails the last card sits right under it.
+            var diffBox = SidePanel(content, "Difficulty", "DIFFICULTY", -480f, 150f);
             var diffValue = Txt(diffBox, "Value", "RUSH", fontTitle, 46, Magenta, TextAlignmentOptions.Center);
-            Place(diffValue.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -62), new Vector2(300, 56));
+            Place(diffValue.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(0, -58), new Vector2(300, 56));
             Button DiffArrow(string name, string glyph, float x)
             {
                 var a = Txt(diffBox, name, glyph, fontTitle, 44, Color.white, TextAlignmentOptions.Center);
                 a.raycastTarget = true;
-                Place(a.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(x, -62), new Vector2(60, 56));
+                Place(a.rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2(x, -58), new Vector2(60, 56));
                 var b = a.gameObject.AddComponent<Button>();
                 b.targetGraphic = a;
                 var cb = b.colors; cb.normalColor = Color.white; cb.highlightedColor = Magenta; cb.disabledColor = new Color(1, 1, 1, 0.15f); b.colors = cb;
@@ -933,11 +934,12 @@ namespace ShiftRush.EditorTools
             {
                 diffPips[k] = Img(diffBox, "Pip " + (k + 1), slant, new Color(1, 1, 1, 0.15f));
                 diffPips[k].type = Image.Type.Sliced; diffPips[k].pixelsPerUnitMultiplier = 4f; diffPips[k].raycastTarget = false;
-                Place(diffPips[k].rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2((k - 1) * 62, -100), new Vector2(54, 8));
+                Place(diffPips[k].rectTransform, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0.5f, 0.5f), new Vector2((k - 1) * 62, -94), new Vector2(54, 8));
             }
             var diffBlurb = Txt(diffBox, "Blurb", "", fontBold, 17, Steel, TextAlignmentOptions.Center);
-            diffBlurb.enableAutoSizing = true; diffBlurb.fontSizeMin = 13; diffBlurb.fontSizeMax = 17;
-            Place(diffBlurb.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0.5f, 0), new Vector2(0, 14), new Vector2(-70, 44));
+            diffBlurb.enableAutoSizing = true; diffBlurb.fontSizeMin = 12; diffBlurb.fontSizeMax = 16;
+            diffBlurb.textWrappingMode = TextWrappingModes.Normal; diffBlurb.lineSpacing = -12f; // two short lines inside the box
+            Place(diffBlurb.rectTransform, new Vector2(0, 0), new Vector2(1, 0), new Vector2(0.5f, 0), new Vector2(0, 8), new Vector2(-90, 40));
 
             var row = new GameObject("Cards", typeof(RectTransform)).GetComponent<RectTransform>();
             row.SetParent(content, false);
